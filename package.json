@@ -1,0 +1,15 @@
+{
+  "name": "authentication",
+  "version": "1.0.0",
+  "description": "This contains the backend logic for the repo",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.1",
+    "dotenv": "^16.4.7"
+  }
+}
