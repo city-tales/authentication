@@ -1,11 +1,9 @@
-require('dotenv').config();
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
+const express = require("express");
+const { Pool } = require("pg");
 
 const PROTO_PATH = "../shared-proto/authentication/service/rpc_request.proto";
-
-const port = process.env.PORT;
-const serverUrl = process.env.BASE_URL || `127.0.0.1:${port}`;
 
 const options = {
     keepCase: true,
@@ -21,6 +19,6 @@ const rpcRequestProto = grpc.loadPackageDefinition(packageDefinition);
 module.exports = {
     grpc,
     rpcRequestProto,
-    serverUrl,
-    port,
+    express,
+    Pool,
 };
