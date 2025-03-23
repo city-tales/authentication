@@ -1,6 +1,11 @@
-const emailLogin = (call, callback) => {
+const { pool } = require("../../database/connection.js");
+
+const emailLogin = async (call, callback) => {
     const request = call.request;
-    console.log("EmailLogin Request:", request);
+
+    /* */
+    const dbRes = await pool.query(`select * from users`); // testing
+    console.log(dbRes); // testing
 
     const response = {
         success: true,
