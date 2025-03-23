@@ -4,12 +4,24 @@
   "description": "This contains the backend logic for the repo",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/city-tales/authentication.git"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/city-tales/authentication/issues"
+  },
+  "homepage": "https://github.com/city-tales/authentication#readme",
   "dependencies": {
     "@grpc/grpc-js": "^1.13.1",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.14.1"
   }
 }
