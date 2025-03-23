@@ -1,5 +1,5 @@
-const { Pool } = require("../services/imports.js");
-const { dbUsername, dbHost, dbName, dbPassword, dbPort } = require("../services/config.js");
+const { Pool, createClient } = require("../services/imports.js");
+const { dbUsername, dbHost, dbName, dbPassword, dbPort, redisUsername, redisPassword, redisHost, redisPort } = require("../services/config.js");
 
 const pool = new Pool({
     user: dbUsername,
@@ -13,6 +13,17 @@ const pool = new Pool({
     }
 });
 
+const client = createClient({
+    username: redisUsername,
+    password: redisPassword,
+    socket: {
+        host: redisHost,
+        port: Number(redisPort),
+    }
+});
+client.on('error', err => console.log('Redis Client Error', err));
+
 module.exports = {
     pool,
+    client,
 }
