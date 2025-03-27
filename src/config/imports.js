@@ -1,10 +1,10 @@
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
-const express = require("express");
-const { Pool } = require("pg");
-const { createClient } = require("redis");
+import grpc from "@grpc/grpc-js";
+import protoLoader from "@grpc/proto-loader";
+import express from "express";
+import postgres from "pg"; const { Pool } = postgres;
+import redis from "redis"; const { createClient } = redis;
 
-const PROTO_PATH = "../shared-proto/authentication/service/rpc_request.proto";
+const PROTO_PATH = "../shared-proto/authentication/rpc_request.proto";
 
 const options = {
     keepCase: true,
@@ -17,7 +17,7 @@ const options = {
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, options);
 const rpcRequestProto = grpc.loadPackageDefinition(packageDefinition);
 
-module.exports = {
+export {
     createClient,
     grpc,
     rpcRequestProto,

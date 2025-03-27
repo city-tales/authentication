@@ -1,4 +1,4 @@
-require('dotenv').config();
+import 'dotenv/config';
 
 const port = process.env.PORT;
 const serverUrl = process.env.BASE_URL || `127.0.0.1:${port}`;
@@ -12,7 +12,7 @@ const redisPassword = process.env.REDIS_PASSWORD;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
 
-module.exports = {
+export {
     port, 
     serverUrl,
     dbUsername,
