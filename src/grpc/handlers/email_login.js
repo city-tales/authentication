@@ -1,4 +1,4 @@
-const { pool } = require("../../database/connection.js");
+import { pool } from "../../config/postgres.js";
 
 const emailLogin = async (call, callback) => {
     const request = call.request;
@@ -15,6 +15,6 @@ const emailLogin = async (call, callback) => {
     callback(null, response);
 };
 
-module.exports = {
+export {
     emailLogin,
 }
