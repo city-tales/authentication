@@ -1,7 +1,8 @@
 import 'dotenv/config';
+import { Constants } from '../utils/constants.js';
 
 const port = process.env.PORT;
-const serverUrl = process.env.BASE_URL || `127.0.0.1:${port}`;
+const serverUrl = process.env.BASE_URL || Constants.SERVER_URL;
 const dbUsername = process.env.DB_USERNAME;
 const dbName = process.env.DB_DATABASE;
 const dbHost = process.env.DB_HOST;
@@ -11,6 +12,7 @@ const redisUsername = process.env.REDIS_USERNAME;
 const redisPassword = process.env.REDIS_PASSWORD;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
+const privateKey = process.env.JWT_PRIVATE_KEY.replace(/\s+/g, '');
 
 export {
     port, 
@@ -24,4 +26,5 @@ export {
     redisPassword,
     redisHost,
     redisPort,
+    privateKey,
 };

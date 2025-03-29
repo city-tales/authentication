@@ -1,59 +1,83 @@
-import { Device } from "../database/interface/device_info.js";
-import { SignUpResponse } from "../database/interface/signup_response.js";
-import { Users } from "../database/interface/user_signup.js";
+import { Device, GPRCDevice } from "../database/interface/device_info.js";
+import { SignUpSuccess } from "../database/interface/response.js";
+import { GPRCUsers, Users } from "../database/interface/user_signup.js";
 import { v4 as uuidv4 } from 'uuid';
 import { userSignUp } from "../database/repositories/user_signup.js";
+import { Constants } from "../utils/constants.js";
+import { SignUpError } from "../utils/errors.js";
+import { helper } from "../utils/helper.js";
 
 interface UserSignUpController {
-    createUser(userInfo: any, deviceInfo: any) : Promise<SignUpResponse>;
+    createUser(userInfo: GPRCUsers, deviceInfo: GPRCDevice) : Promise<SignUpSuccess>;
 }
 
 class UserSignUpControllerImpl implements UserSignUpController {
-    mapUserSchema(userInfo: any): Users {
+    mapUserSchema(userInfo: GPRCUsers) : Users {
+        const sanitisedUserInfo : GPRCUsers = helper.convertToType<GPRCUsers>(
+            helper.sanitiseObject(userInfo), 
+        );
+
         return {
             _id: uuidv4(),
-            email: userInfo.email,
-            password: userInfo.password,
-            username: userInfo.username,
-            name: userInfo.name,
-            primary_country_code: userInfo.primary_country_code,
-            phone_number: userInfo.phoneNumber,
-            secondary_country_code: userInfo.secondary_country_code,
-            alternate_phone: userInfo.alternatePhone
+            email: sanitisedUserInfo.email,
+            password: sanitisedUserInfo.password,
+            username: sanitisedUserInfo.username || helper.generateUniqueUserName(sanitisedUserInfo),
+            name: sanitisedUserInfo.name,
+            primary_country_code: sanitisedUserInfo.primaryCountryCode,
+            phone_number: sanitisedUserInfo.phoneNumber,
+            secondary_country_code: sanitisedUserInfo.secondaryCountryCode,
+            alternate_phone: sanitisedUserInfo.alternatePhone,
         };
     }
 
-    mapDeviceSchema(deviceInfo: any): Device {
+    mapDeviceSchema(deviceInfo: GPRCDevice) : Device {
+        const sanitisedDeviceInfo : GPRCDevice = helper.convertToType<GPRCDevice>(
+            helper.sanitiseObject(deviceInfo), 
+        );
+
         return {
             _id: uuidv4(),
-            device_type: deviceInfo.deviceType,
-            browser_info: deviceInfo.browserInfo,
-            ip_address: deviceInfo.ipAddress,
-            device_id: deviceInfo.deviceId,
-            platform: deviceInfo.platform,
-            device_name: deviceInfo.deviceName,
-            login_time: deviceInfo.loginTime,
+            device_type: sanitisedDeviceInfo.deviceType,
+            browser_info: sanitisedDeviceInfo.browserInfo,
+            ip_address: sanitisedDeviceInfo.ipAddress,
+            device_id: sanitisedDeviceInfo.deviceId,
+            platform: sanitisedDeviceInfo.platform,
+            device_name: sanitisedDeviceInfo.deviceName,
+            login_time: sanitisedDeviceInfo.loginTime || Constants.CURRENT_TIME,
         };
     }
 
-    async createUser(userInfo: any, deviceInfo: any): Promise<SignUpResponse> {
+    async createUser(userInfo: GPRCUsers, deviceInfo: GPRCDevice) : Promise<SignUpSuccess> {
         const userSchemaInfo = this.mapUserSchema(userInfo);
         const deviceSchemaInfo = this.mapDeviceSchema(deviceInfo);
+
+        let response : SignUpSuccess = {
+            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
+            message: Constants.SIGNUP_MESSAGE.PROCESSING,
+            statusCode: Constants.STATUS_CODES.PROCESSING,
+        };
         
         try {
-            const userResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo);
-
-            return userResponse;
+            const isExistingUser = await userSignUp.checkIfUserExists(userSchemaInfo);
+            if(isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
+                response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
+                response.statusCode = Constants.STATUS_CODES.ACCEPTED;
+            }
+            else {
+                try {
+                    const userResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo);
+                    response = userResponse;
+                }
+                catch(error) {
+                    throw new SignUpError(error);
+                }
+            }
         }
         catch (error) {
-            console.log(error);
-            throw error(error);
+            throw new SignUpError(error);
         }
 
-        return {
-            message: "Hello controller",
-            status_code: 201
-        };
+        return response;
     }
 }
 

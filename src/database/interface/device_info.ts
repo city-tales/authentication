@@ -1,11 +1,21 @@
 export interface Device {
-    _id: String,
-    device_type?: String,
-    browser_info?: String,
-    ip_address?: String,
-    device_id?: String,
-    platform?: String,
-    device_name?: String,
+    _id: string,
+    device_type?: string,
+    browser_info?: string,
+    ip_address?: string,
+    device_id?: string,
+    platform?: string,
+    device_name?: string,
     login_time: Date,
-    user_id?: String,
+    user_id?: string,
 }
+
+export interface GPRCDevice {
+    deviceType?: string,
+    browserInfo?: string,
+    ipAddress?: string,
+    deviceId?: string,
+    platform?: string,
+    deviceName?: string,
+    loginTime: Date,
+};

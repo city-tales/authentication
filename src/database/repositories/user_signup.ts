@@ -1,23 +1,78 @@
 import { Users } from "../interface/user_signup.js";
 import { user } from "../models/user_signup.js";
-import { SignUpResponse } from "../interface/signup_response.js";
+import { SignUpSuccess } from "../interface/response.js";
 import { Device } from "../interface/device_info.js";
+import { helper } from "../../utils/helper.js";
+import { Constants } from "../../utils/constants.js";
+import { RedisError, SignUpError } from "../../utils/errors.js";
+import { client } from "../../config/redis.js";
 
 interface UserSignUp {
-    createUser(userInfo: Users, deviceInfo: Device) : Promise<SignUpResponse>,
+    checkIfUserExists(userInfo: Users) : Promise<SignUpSuccess>;
+    createUser(userInfo: Users, deviceInfo: Device) : Promise<SignUpSuccess>;
 }
 
 class UserSignUpImpl implements UserSignUp {
-    async createUser(userInfo: Users, deviceInfo: Device) : Promise<SignUpResponse> {
-        try {
-            const response = await user.createUser(userInfo, deviceInfo);
+    async checkIfUserExists(userInfo: Users) : Promise<SignUpSuccess> {
+        let response: SignUpSuccess = {
+            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
+            message: Constants.SIGNUP_MESSAGE.PROCESSING,
+            statusCode: Constants.STATUS_CODES.PROCESSING,
+        };
 
-            return response;
+        try {
+            const redisKey = helper.serialiseRedisKeyValues(
+                helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfo)
+            );
+            const isKeyInRedis = await client.get(redisKey);
+
+            if(!helper.parseBooleanString(isKeyInRedis)) {
+                const userInfoForCheckingExistingUser = {
+                    email: helper.passStringNullParams(userInfo.email),
+                    primary_country_code: helper.passStringNullParams(userInfo.primary_country_code),
+                    phone_number: helper.passStringNullParams(userInfo.phone_number),
+                };
+                const columns = helper.createQueryColumn(userInfoForCheckingExistingUser);
+
+                try {
+                    const userResponse = await user.checkIfUserExists(columns, userInfoForCheckingExistingUser);
+                    response = userResponse;
+                }
+                catch(error) {
+                    throw new SignUpError(error);
+                }
+            }
+        }
+        catch(error) {
+            throw new RedisError(error);
+        }
+
+        return response;
+    }
+
+    async createUser(userInfo: Users, deviceInfo: Device) : Promise<SignUpSuccess> {
+        let response: SignUpSuccess = {
+            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
+            message: Constants.SIGNUP_MESSAGE.PROCESSING,
+            statusCode: Constants.STATUS_CODES.PROCESSING,
+        };
+
+        try {
+            const columns = helper.createQueryColumn(userInfo);
+            const values = helper.createQueryValues(userInfo);
+
+            const redisKey = helper.serialiseRedisKeyValues(
+                helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfo)
+            );
+
+            const userResponse = await user.createUser(columns, values, userInfo, redisKey);
+            response = userResponse;
         }
         catch (error) {
-            console.log(error);
-            throw error;
+            throw new SignUpError(error);
         }
+
+        return response;
     }
 }
 
