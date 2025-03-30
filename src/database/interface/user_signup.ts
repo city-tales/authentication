@@ -14,7 +14,6 @@ export interface GPRCUsers {
     email: string,
     password: string,
     name: string,
-    username: string,
     primaryCountryCode?: string,
     phoneNumber?: string,
     secondaryCountryCode?: string,

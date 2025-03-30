@@ -21,7 +21,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
             _id: uuidv4(),
             email: sanitisedUserInfo.email,
             password: sanitisedUserInfo.password,
-            username: sanitisedUserInfo.username || helper.generateUniqueUserName(sanitisedUserInfo),
+            username: helper.generateUniqueUserName(sanitisedUserInfo),
             name: sanitisedUserInfo.name,
             primary_country_code: sanitisedUserInfo.primaryCountryCode,
             phone_number: sanitisedUserInfo.phoneNumber,

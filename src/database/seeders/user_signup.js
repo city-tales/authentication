@@ -16,6 +16,5 @@ const userSignUpRequest1 = {
         "phoneNumber": "+1-555-123-4567",
         "primaryCountryCode": "US",
         "secondaryCountryCode": "",
-        "username": "johndoe99"
     }
 }

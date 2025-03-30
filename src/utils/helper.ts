@@ -172,22 +172,25 @@ export class HelperImpl implements Helper {
 
         const randomWord = uniqueUsernameGenerator(config);
         const randomSuffix = crypto.randomBytes(2).toString('hex');
-        let emailPrefix, name, phonePrefix, baseUsername = '';
+        let emailPrefix, phonePrefix, baseUsername = '';
 
         if(this.isNeitherNullNorUndefinedNorEmpty(userInfo.email)) {
             emailPrefix = userInfo.email.split('@')[0];
             baseUsername += `${emailPrefix}-`;
         }
+        else if(this.isNeitherNullNorUndefinedNorEmpty(userInfo.name)) {
+            baseUsername += `${userInfo.name}-`;
+        }
 
         if(!this.isNeitherNullNorUndefinedNorEmpty(userInfo.name)) 
             baseUsername += `${faker.person.lastName()}-`;
-        else 
-            baseUsername += `${name}-`;
-        baseUsername += `${randomWord}`;
+        baseUsername += `${randomWord}-`;
 
         if(this.isNeitherNullNorUndefinedNorEmpty(userInfo.phoneNumber)) {
             phonePrefix = userInfo.phoneNumber!.split('-')[1];
-            baseUsername += `${phonePrefix}-`;
+            baseUsername += (this.isNeitherNullNorUndefinedNorEmpty(phonePrefix) ? `${phonePrefix}-` : `${faker.number.int(
+                { min: 100, max: 999 })
+            }-`)
         }
         baseUsername += `${randomSuffix}`;
 
