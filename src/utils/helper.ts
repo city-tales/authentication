@@ -4,6 +4,7 @@ import { pool } from "../config/postgres.js";
 import { client } from "../config/redis.js";
 import { GPRCUsers, Users } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
+import { RedisError } from "./errors.js";
 
 interface Helper {
     createQueryColumn(columns: unknown) : unknown;
@@ -64,9 +65,9 @@ export class HelperImpl implements Helper {
         }
         catch (error) {
             await client.query(Constants.DB_COMMANDS.ROLLBACK);
-            if(helper.isNeitherNullNorUndefinedNorEmpty(error.message)) {
+            if(helper.isNeitherNullNorUndefinedNorEmpty(error.message)) 
                 throw new Error(error.message);
-            }
+
             throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
         }
         finally {
@@ -124,10 +125,12 @@ export class HelperImpl implements Helper {
 
     async setRedis(key: string, value: string) : Promise<void> {
         try {
-            await client.set(key, value);
+            await client.set(key, value, { 
+                EX: Constants.DB_TIMEOUTS.REDIS_TIMEOUT 
+            });
         }
         catch (error) {
-
+            throw new RedisError(error.message);
         }
     }
 

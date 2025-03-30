@@ -35,7 +35,7 @@ class UserSignUpImpl implements UserSignUp {
                 const columns = helper.createQueryColumn(userInfoForCheckingExistingUser);
 
                 try {
-                    const userResponse = await user.checkIfUserExists(columns, userInfoForCheckingExistingUser);
+                    const userResponse = await user.checkIfUserExists(columns, userInfoForCheckingExistingUser, userInfo);
                     response = userResponse;
                 }
                 catch(error) {
@@ -66,6 +66,7 @@ class UserSignUpImpl implements UserSignUp {
             );
 
             const userResponse = await user.createUser(columns, values, userInfo, redisKey);
+            await helper.generateAuthToken(userInfo._id, userInfo.username);
             response = userResponse;
         }
         catch (error) {

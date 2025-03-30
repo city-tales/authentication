@@ -12,7 +12,7 @@ const redisUsername = process.env.REDIS_USERNAME;
 const redisPassword = process.env.REDIS_PASSWORD;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
-const privateKey = process.env.JWT_PRIVATE_KEY.replace(/\s+/g, '');
+const privateKey = process.env.JWT_PRIVATE_KEY;
 
 export {
     port, 
