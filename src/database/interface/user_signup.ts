@@ -1,4 +1,4 @@
-export interface Users {
+export interface UserSignUpInterface {
     _id: string,
     email: string,
     password: string,
@@ -10,7 +10,7 @@ export interface Users {
     alternate_phone?: string,
 };
 
-export interface GPRCUsers {
+export interface GPRCUserSignUpInterface {
     email: string,
     password: string,
     name: string,

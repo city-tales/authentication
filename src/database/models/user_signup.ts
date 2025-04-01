@@ -1,16 +1,16 @@
-import { SignUpSuccess } from "../interface/response.js";
+import { SignUpSuccessResponse } from "../interface/response.js";
 import { helper } from "../../utils/helper.js";
 import { Constants } from "../../utils/constants.js";
 import { SignUpError } from "../../utils/errors.js";
-import { Users } from "../interface/user_signup.js";
+import { UserSignUpInterface } from "../interface/user_signup.js";
 
-interface User {
-    checkIfUserExists(columns, values, userInfo: Users) : Promise<SignUpSuccess>;
-    createUser(columns, values, userInfo: Users, redisKey: string) : Promise<SignUpSuccess>;
+interface UserSignUp {
+    checkIfUserExists(columns, values, userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse>;
+    createUser(columns, values, userInfo: UserSignUpInterface, redisKey: string) : Promise<SignUpSuccessResponse>;
 }
 
-class UserImpl implements User {
-    async checkIfUserExists(columns, values, userInfo: Users) : Promise<SignUpSuccess> {
+class UserSignUpImpl implements UserSignUp {
+    async checkIfUserExists(columns, values, userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse> {
         const tableName = Constants.USER_TABLE;
         const query = `SELECT (${columns}) FROM ${tableName} WHERE 
             (email = '${values.email}' OR '${values.email}' IS NULL) AND
@@ -18,10 +18,10 @@ class UserImpl implements User {
             (phone_number = '${values.phone_number}' OR '${values.phone_number}' IS NULL) 
         `;
 
-        const response : SignUpSuccess = {
+        const response : SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.PROCESSING,
+            statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
         };
 
         try {
@@ -31,7 +31,7 @@ class UserImpl implements User {
                 if(!queryResponse.rowCount) response.message = Constants.SIGNUP_MESSAGE.NO_CONTENT;
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 
-                response.statusCode = Constants.STATUS_CODES.ACCEPTED;
+                response.statusCode = Constants.STATUS_CODES.OK;
             }
         }
         catch(error) {
@@ -44,11 +44,11 @@ class UserImpl implements User {
         return response;
     }
 
-    async createUser(columns, values, userInfo: Users, redisKey: string) : Promise<SignUpSuccess> {
+    async createUser(columns, values, userInfo: UserSignUpInterface, redisKey: string) : Promise<SignUpSuccessResponse> {
         const tableName = Constants.USER_TABLE;
         const query = `INSERT INTO ${tableName}(${columns}) VALUES (${values})`;
 
-        const response : SignUpSuccess = {
+        const response : SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.PROCESSING,
@@ -69,8 +69,14 @@ class UserImpl implements User {
         }
 
         try {
-            if(response.message === Constants.SIGNUP_MESSAGE.CREATED) 
-                await helper.setRedis(redisKey, Constants.BOOLEAN_VALUES.TRUE);
+            if(response.message === Constants.SIGNUP_MESSAGE.CREATED) {
+                const redisEmailValue : Object = {
+                    _id: userInfo._id,
+                    username: userInfo.username
+                };
+
+                await helper.setRedis(redisKey, helper.serialiseRedisKeyValues(redisEmailValue));
+            }
         }
         catch (error) {
             if(response.message === Constants.SIGNUP_MESSAGE.CREATED) 
@@ -83,4 +89,4 @@ class UserImpl implements User {
     }
 }
 
-export const user = new UserImpl();
+export const userSignUpImpl = new UserSignUpImpl();
