@@ -1,12 +1,21 @@
 export interface Users {
-    _id: String,
-    email: String,
-    password: String,
-    name: String,
-    username?: String,
-    primary_country_code?: String,
-    phone_number?: String,
-    secondary_country_code?: String,
-    alternate_phone?: String,
+    _id: string,
+    email: string,
+    password: string,
+    name: string,
+    username: string,
+    primary_country_code?: string,
+    phone_number?: string,
+    secondary_country_code?: string,
+    alternate_phone?: string,
 };
 
+export interface GPRCUsers {
+    email: string,
+    password: string,
+    name: string,
+    primaryCountryCode?: string,
+    phoneNumber?: string,
+    secondaryCountryCode?: string,
+    alternatePhone?: string,
+};

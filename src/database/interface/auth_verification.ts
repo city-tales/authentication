@@ -1,5 +1,5 @@
 export interface AuthVerification {
-    _id: String,
+    _id: string,
     isEmailVerified: Boolean,
     isGoogleVerified: Boolean,
     isAppleVerified: Boolean,
@@ -8,5 +8,5 @@ export interface AuthVerification {
         isPhoneVerified: Boolean,
         enabled: Boolean,
     },
-    user_id: String,
+    user_id: string,
 };

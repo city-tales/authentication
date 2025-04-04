@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS USERS(
     email VARCHAR(50),
     password CHAR(256),
     name VARCHAR(25),
-    username VARCHAR(50),
+    username VARCHAR(50) UNIQUE NOT NULL,
     primary_country_code VARCHAR(4),
     phone_number VARCHAR(16),
     secondary_country_code VARCHAR(4),
