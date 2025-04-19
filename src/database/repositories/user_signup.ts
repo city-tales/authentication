@@ -42,6 +42,13 @@ class UserSignUpImpl implements UserSignUp {
                     throw new SignUpError(error);
                 }
             }
+            else {
+                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis));
+
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
+                response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
+                response.statusCode = Constants.STATUS_CODES.OK;
+            }
         }
         catch(error) {
             throw new RedisError(error);
