@@ -113,8 +113,20 @@ enum SIGNUP_MESSAGE {
     NO_CONTENT = 'Account do not exists',
 };
 
+enum LOGIN_MESSAGE {
+    EMPTY_TOKEN = '',
+    PROCESSING = 'Processing',
+    NOT_VERIFIED = 'Please verify email',
+    NO_CONTENT = 'Account do not exists',
+    EMAIL_DO_NOT_EXISTS = 'Email do not exists',
+    WRONG_AUTHENTICATION = 'Wrong Password',
+    SUCCESS = 'Logging In',
+    FAILED = 'Server Error',
+};
+
 enum REDIS_MESSAGE {
     FAILED = 'Redis Failure',
+    NO_CONTENT = 'No Data In Redis',
 };
 
 enum JWT_CONFIG { 
@@ -135,6 +147,7 @@ export class Constants {
     static readonly DB_ERRORS = DB_ERRORS;
     static readonly STATUS_CODES = STATUS_CODES;
     static readonly SIGNUP_MESSAGE = SIGNUP_MESSAGE;
+    static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
     static readonly REDIS_MESSAGE = REDIS_MESSAGE;
     static readonly JWT_CONFIG = JWT_CONFIG;
 };

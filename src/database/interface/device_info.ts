@@ -1,4 +1,4 @@
-export interface Device {
+export interface DeviceInterface {
     _id: string,
     device_type?: string,
     browser_info?: string,
@@ -10,7 +10,7 @@ export interface Device {
     user_id?: string,
 }
 
-export interface GPRCDevice {
+export interface GPRCDeviceInterface {
     deviceType?: string,
     browserInfo?: string,
     ipAddress?: string,

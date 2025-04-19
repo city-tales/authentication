@@ -1,4 +1,4 @@
-export interface AuthVerification {
+export interface AuthVerificationInterface {
     _id: string,
     isEmailVerified: Boolean,
     isGoogleVerified: Boolean,

@@ -1,6 +1,6 @@
-import { Device, GPRCDevice } from "../database/interface/device_info.js";
-import { SignUpSuccess } from "../database/interface/response.js";
-import { GPRCUsers, Users } from "../database/interface/user_signup.js";
+import { GPRCDeviceInterface } from "../database/interface/device_info.js";
+import { SignUpSuccessResponse } from "../database/interface/response.js";
+import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { v4 as uuidv4 } from 'uuid';
 import { userSignUp } from "../database/repositories/user_signup.js";
 import { Constants } from "../utils/constants.js";
@@ -8,12 +8,13 @@ import { SignUpError } from "../utils/errors.js";
 import { helper } from "../utils/helper.js";
 
 interface UserSignUpController {
-    createUser(userInfo: GPRCUsers, deviceInfo: GPRCDevice) : Promise<SignUpSuccess>;
+    mapUserSchema(userInfo: GPRCUserSignUpInterface) : UserSignUpInterface;
+    createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface) : Promise<SignUpSuccessResponse>;
 }
 
 class UserSignUpControllerImpl implements UserSignUpController {
-    mapUserSchema(userInfo: GPRCUsers) : Users {
-        const sanitisedUserInfo : GPRCUsers = helper.convertToType<GPRCUsers>(
+    mapUserSchema(userInfo: GPRCUserSignUpInterface) : UserSignUpInterface {
+        const sanitisedUserInfo : GPRCUserSignUpInterface = helper.convertToType<GPRCUserSignUpInterface>(
             helper.sanitiseObject(userInfo), 
         );
 
@@ -30,28 +31,11 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    mapDeviceSchema(deviceInfo: GPRCDevice) : Device {
-        const sanitisedDeviceInfo : GPRCDevice = helper.convertToType<GPRCDevice>(
-            helper.sanitiseObject(deviceInfo), 
-        );
-
-        return {
-            _id: uuidv4(),
-            device_type: sanitisedDeviceInfo.deviceType,
-            browser_info: sanitisedDeviceInfo.browserInfo,
-            ip_address: sanitisedDeviceInfo.ipAddress,
-            device_id: sanitisedDeviceInfo.deviceId,
-            platform: sanitisedDeviceInfo.platform,
-            device_name: sanitisedDeviceInfo.deviceName,
-            login_time: sanitisedDeviceInfo.loginTime || Constants.CURRENT_TIME,
-        };
-    }
-
-    async createUser(userInfo: GPRCUsers, deviceInfo: GPRCDevice) : Promise<SignUpSuccess> {
+    async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface) : Promise<SignUpSuccessResponse> {
         const userSchemaInfo = this.mapUserSchema(userInfo);
-        const deviceSchemaInfo = this.mapDeviceSchema(deviceInfo);
+        const deviceSchemaInfo = helper.mapDeviceSchema(deviceInfo);
 
-        let response : SignUpSuccess = {
+        let response : SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.PROCESSING,
@@ -61,7 +45,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
             const isExistingUser = await userSignUp.checkIfUserExists(userSchemaInfo);
             if(isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
-                response.statusCode = Constants.STATUS_CODES.ACCEPTED;
+                response.statusCode = Constants.STATUS_CODES.OK;
             }
             else {
                 try {

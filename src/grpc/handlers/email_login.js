@@ -1,18 +1,18 @@
-import { pool } from "../../config/postgres.js";
+import { userLoginControllerImpl } from "../../controllers/email_login.js";
 
 const emailLogin = async (call, callback) => {
     const request = call.request;
+    let toRet;
 
-    /* */
-    const dbRes = await pool.query(`select * from users`); // testing
-    console.log(dbRes); // testing
+    try {
+        const response = await userLoginControllerImpl.loginUser(request.userEmailLoginRequest, request.userDeviceInformation);
+        toRet = response;
+    }
+    catch (error) {
+        toRet = error;
+    }
 
-    const response = {
-        success: true,
-        message: "Email login successful!"
-    };
-
-    callback(null, response);
+    callback(null, toRet);
 };
 
 export {
