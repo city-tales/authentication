@@ -16,7 +16,8 @@ enum DB_TIMEOUTS {
     QUERY_TIMEOUT = 10000,
     LOCK_TIMEOUT = 10000,
     IDLE_TIMEOUT = 10000,
-    REDIS_TIMEOUT = 600,
+    CACHE_DB_REDIS_TIMEOUT = 600,
+    QUEUE_DB_REDIS_TIMEOUT = 10000,
 };
 
 enum DB_COMMANDS {
@@ -134,12 +135,39 @@ enum JWT_CONFIG {
     ALGORITHM = 'ES256'
 };
 
+enum DB {
+    SAVE_IN_REDIS = 'saveInRedis',
+    SAVE_IN_DB = 'saveInDB',
+    AUTHENTICATION_QUEUE_DB = 'authentication-queue-db',
+};
+
+enum QUEUE_DB {
+    MAX_ATTEMPTS = 3,
+    BACKOFF_EXPONENTIAL = 'exponential',
+    STALLED_TIMEOUT_INTERVAL = 300000,
+    GUARD_TIMEOUT_INTERVAL = 5000,
+    DRAIN_DELAY_TIMEOUT = 300,
+    BACKOFF_DELAY = 5000,
+    JOB_TIMEOUT = 10000,
+    LOCK_DURATION = 10000,
+    CONCURRENCY = 5,
+};
+
+enum AUTH_TABLES {
+    USER_TABLE = 'users',
+    DEVICE_TABLE = 'device'
+};
+
+enum DEV_CONTROLLER {
+    SWTICH_OFF_REDIS = 'true'
+};
+
 export class Constants {
     static readonly PORT = process.env.port;
     static readonly DB_PORT = '5432';
     static readonly SERVER_URL = `127.0.0.1:${this.PORT}`;
     static readonly CURRENT_TIME = Date.now();
-    static readonly USER_TABLE = 'users';
+    static readonly AUTH_TABLES = AUTH_TABLES;
     static readonly BOOLEAN_VALUES = BOOLEAN_VALUES;
     static readonly SERIALISATION_KEYS = SERIALISATION_KEYS;
     static readonly DB_TIMEOUTS = DB_TIMEOUTS;
@@ -150,4 +178,7 @@ export class Constants {
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
     static readonly REDIS_MESSAGE = REDIS_MESSAGE;
     static readonly JWT_CONFIG = JWT_CONFIG;
+    static readonly DB = DB;
+    static readonly QUEUE_DB = QUEUE_DB;
+    static readonly DEV_CONTROLLER = DEV_CONTROLLER;
 };

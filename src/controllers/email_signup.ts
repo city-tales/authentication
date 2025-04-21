@@ -1,4 +1,4 @@
-import { GPRCDeviceInterface } from "../database/interface/device_info.js";
+import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { SignUpSuccessResponse } from "../database/interface/response.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { v4 as uuidv4 } from 'uuid';
@@ -32,8 +32,8 @@ class UserSignUpControllerImpl implements UserSignUpController {
     }
 
     async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface) : Promise<SignUpSuccessResponse> {
-        const userSchemaInfo = this.mapUserSchema(userInfo);
-        const deviceSchemaInfo = helper.mapDeviceSchema(deviceInfo);
+        const userSchemaInfo: UserSignUpInterface = this.mapUserSchema(userInfo);
+        const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
 
         let response : SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
