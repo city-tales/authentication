@@ -25,7 +25,7 @@ class UserLoginControllerImpl implements UserLoginController {
 
     async loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface) : Promise<LoginSuccessResponse> {
         const userLoginSchemaInfo: UserLoginInterface = this.mapUserLoginSchema(userInfo);
-        const deviceLoginSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo); // fix
+        const deviceLoginSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
 
         let response : LoginSuccessResponse = {
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,

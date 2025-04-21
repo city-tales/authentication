@@ -1,4 +1,4 @@
-import { client } from "../../config/redis.js";
+import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { LoginError } from "../../utils/errors.js";
 import { helper } from "../../utils/helper.js";
@@ -10,7 +10,7 @@ import { userLoginImpl } from "../models/user_login.js";
 
 interface UserLoginRepository {
     checkUserInRedis(email: string);
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface) : Promise<LoginSuccessResponse>;
+    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface): Promise<LoginSuccessResponse>;
 }
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
@@ -21,7 +21,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             verified: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
             statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
             retryVerification: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
-        }; 
+        };
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: email,
@@ -32,9 +32,10 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         );
 
         try {
-            const isKeyInRedis = await client.get(redisKey);
-            if(helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-            const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis));
+            const isKeyInRedis = await cacheDB.get(redisKey);
+            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis));
+
                 response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
@@ -53,12 +54,12 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             throw new LoginError(
                 helper.convertToClassType<LoginError>(response, LoginError)
             );
-        }   
+        }
 
         return response;
     }
 
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface) : Promise<LoginSuccessResponse> {
+    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface): Promise<LoginSuccessResponse> {
         let response: LoginSuccessResponse = {
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
@@ -67,11 +68,8 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             retryVerification: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
         };
 
-        const columns = helper.createQueryColumn(userInfo);
-        const values = helper.createQueryValues(userInfo);
-
         try {
-            const userResponse = await userLoginImpl.loginUser(columns, values);
+            const userResponse = await userLoginImpl.loginUser(userInfo, deviceInfo);
             response = userResponse;
         }
         catch (error) {

@@ -9,7 +9,6 @@ import { faker } from '@faker-js/faker';
 import postgres from "pg"; const { Pool } = postgres;
 import redis from "redis"; const { createClient } = redis;
 import { uniqueUsernameGenerator, adjectives, nouns } from 'unique-username-generator';
-import Bull from 'bull'; 
 import { Worker, Job, Queue } from 'bullmq';
 
 const PROTO_PATH = "../shared-proto/authentication/rpc_request.proto";
@@ -39,7 +38,6 @@ export {
     uniqueUsernameGenerator, 
     adjectives,
     nouns,
-    Bull,
     Worker,
     Job,
     Queue

@@ -5,8 +5,9 @@ import { DeviceInterface } from "../interface/device_info.js";
 import { helper } from "../../utils/helper.js";
 import { Constants } from "../../utils/constants.js";
 import { RedisError, SignUpError } from "../../utils/errors.js";
-import { client } from "../../config/redis.js";
+import { cacheDB } from "../../config/redis.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
+import { queueEmployee } from "../../utils/workers.js";
 
 interface UserSignUpRepository {
     checkIfUserExists(userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse>;
@@ -29,9 +30,9 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             const redisKey: string = helper.serialiseRedisKeyValues(
                 helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
             );
-            const isKeyInRedis = await client.get(redisKey);
+            const isKeyInRedis = await cacheDB.get(redisKey);
 
-            if(helper.isEitherNullOrUndefined(isKeyInRedis)) { 
+            if(helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) { 
                 const userInfoForCheckingExistingUser = {
                     email: helper.passStringNullParams(userInfo.email),
                     primary_country_code: helper.passStringNullParams(userInfo.primary_country_code),
@@ -74,14 +75,11 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
         };
 
         try {
-            const columns = helper.createQueryColumn(userInfo);
-            const values = helper.createQueryValues(userInfo);
-
             const redisKey = helper.serialiseRedisKeyValues(
                 helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
             );
 
-            const userResponse = await userSignUpImpl.createUser(columns, values, userInfo, redisKey);
+            const userResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey);
             response = userResponse;
         }
         catch (error) {

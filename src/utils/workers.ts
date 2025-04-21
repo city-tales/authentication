@@ -35,6 +35,16 @@ class QueueImpl implements QueueInterface {
                 throw error;
             }
         });
+
+        this.registerWorker(Constants.DB.SAVE_IN_REDIS, async (job: Job) => {
+            const [key, value] = job.data.params;
+            try {
+                await helper.setRedis(key, helper.serialiseRedisKeyValues(value));
+            }
+            catch (error) {
+                throw error;
+            }
+        });
     }
 
     private registerWorker(queueName: string, processor: (job: Job) => Promise<void>) {

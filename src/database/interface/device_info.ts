@@ -7,7 +7,7 @@ export interface DeviceInterface {
     platform?: string,
     device_name?: string,
     login_time: Date,
-    user_id?: string,
+    user_id?: string | null,
 }
 
 export interface GPRCDeviceInterface {
