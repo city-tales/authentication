@@ -1,20 +1,21 @@
 import { privateKey } from "../config/config.js";
-import { crypto, adjectives, lodash, nouns, uniqueUsernameGenerator, faker, jwt } from "../config/imports.js";
+import { crypto, adjectives, lodash, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { v4 as uuidv4 } from 'uuid';
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
 import { RedisError } from "./errors.js";
 import { RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
+import { ContextInterface } from "../database/interface/helper.js";
+import { logger } from "../config/loki.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    executeQueryAsyncWithoutLock(query: unknown, valuesArray?, errorMessage?: string, queryTimeout?: number);
+    executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, operation?: string, type?: string, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
@@ -24,8 +25,8 @@ interface Helper {
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
-    setRedis(key: string, value: string): Promise<void>;
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string) : DeviceInterface;
+    setRedis(context: ContextInterface, operation: string, type: string, key: string, value: string): Promise<void>;
+    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
     parseBooleanString(truthValue: string | null | undefined): boolean;
     isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
     isEitherNullOrUndefinedOrEmpty(value: number | string | null | undefined): boolean;
@@ -38,6 +39,9 @@ interface Helper {
     sanitiseStringValue(value: string | null | undefined): string | null;
     sanitiseNumericValue(value: number | null | undefined): number | null;
     sanitiseObject(object: Object): Object;
+    generateContext();
+    generateDefaultSuccessParams(tracerId: unknown, format?: string);
+    generateDefaultFailureParams(tracerId: unknown, format?: string);
 };
 
 export class HelperImpl implements Helper {
@@ -57,26 +61,46 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    async executeQueryAsyncWithoutLock(query: any, valuesArray?, errorMessage?: string, queryTimeout?: number) {
+    async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, operation?: string, type?: string, queryTimeout?: number) {
         const cacheDB = await pool.connect();
+        let loggerDefaultParams = {};
+
         try {
             await cacheDB.query(Constants.DB_COMMANDS.BEGIN)
 
             const queryConfig = {
                 text: query,
-                queryTimeout: queryTimeout || Constants.DB_TIMEOUTS.QUERY_TIMEOUT
+                queryTimeout: queryTimeout ?? Constants.DB_TIMEOUTS.QUERY_TIMEOUT
             };
             const response = await cacheDB.query(queryConfig, valuesArray);
 
             await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
+
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                queryConfig,
+            });
+
             return response;
         }
         catch (error) {
             await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
-                throw new Error(error.message);
+            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                error,
+            });
 
-            throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
+            throw new Error(error.message);
         }
         finally {
             cacheDB.release();
@@ -89,16 +113,16 @@ export class HelperImpl implements Helper {
         try {
             await cacheDB.query(Constants.DB_COMMANDS.BEGIN);
 
-            for(const {query, valuesArray} of queries) {
+            for (const { query, valuesArray } of queries) {
                 const queryConfig = {
                     text: query,
                     queryTimeout: queryTimeout || Constants.DB_TIMEOUTS.QUERY_TIMEOUT
                 };
                 const queryResponse = await cacheDB.query(queryConfig, valuesArray);
 
-                if(this.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount)) 
-                    response.push(JSON.stringify(queryResponse));   
-                else 
+                if (this.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount))
+                    response.push(JSON.stringify(queryResponse));
+                else
                     throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
             }
 
@@ -170,16 +194,35 @@ export class HelperImpl implements Helper {
         return deSerialisedObject;
     }
 
-    async setRedis(key: string, value: string): Promise<void> {
+    async setRedis(context: ContextInterface, operation: string, type: string, key: string, value: string): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
-        if(switchOffForDev) return;
+        if (switchOffForDev) return;
+        
+        let loggerDefaultParams = {};
 
         try {
             await cacheDB.set(key, value, {
                 EX: Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
             });
+
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+
         }
         catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                request: { 
+                    key: key,
+                    value: value,
+                },
+                error,
+            });
+
             throw new RedisError(error.message);
         }
     }
@@ -262,7 +305,7 @@ export class HelperImpl implements Helper {
             phonePrefix = userInfo.phoneNumber!.split('-')[1];
             baseUsername += (this.isNeitherNullNorUndefinedNorEmpty(
                 helper.convertToType<string>(phonePrefix)) ? `${phonePrefix}-` : `${faker.number.int(
-                { min: 100, max: 999 })
+                    { min: 100, max: 999 })
                 }-`)
         }
         baseUsername += `${randomSuffix}`;
@@ -292,6 +335,41 @@ export class HelperImpl implements Helper {
                 return [key, value];
             }),
         );
+    }
+
+    generateContext() {
+        const tracerId = uuidv4();
+        return {
+            tracerId: tracerId,
+        };
+    }
+
+    generateDefaultSuccessParams(tracerId: unknown, format?: string) {
+        const timestamp = Date.now();
+
+        return {
+            context: tracerId,
+            defaultSuccessParams: {
+                tracerId,
+                timestamp,
+                success: true,
+            },
+            format: format,
+        };
+    }
+
+    generateDefaultFailureParams(tracerId: unknown, format?: string) {
+        const timestamp = Date.now();
+
+        return {
+            context: tracerId,
+            defaultFailureParams: {
+                tracerId,
+                timestamp,
+                success: false,
+            },
+            format: format,
+        };
     }
 }
 

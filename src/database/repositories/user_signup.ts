@@ -8,21 +8,24 @@ import { RedisError, SignUpError } from "../../utils/errors.js";
 import { cacheDB } from "../../config/redis.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
 import { queueEmployee } from "../../utils/workers.js";
+import { ContextInterface } from "../interface/helper.js";
+import { logger } from "../../config/loki.js";
 
 interface UserSignUpRepository {
-    checkIfUserExists(userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse>;
-    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface) : Promise<SignUpSuccessResponse>;
+    checkIfUserExists(userInfo: UserSignUpInterface, context: ContextInterface): Promise<SignUpSuccessResponse>;
+    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<SignUpSuccessResponse>;
 }
 
 class UserSignUpRepositoryImpl implements UserSignUpRepository {
-    async checkIfUserExists(userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse> {
+    async checkIfUserExists(userInfo: UserSignUpInterface, context: ContextInterface): Promise<SignUpSuccessResponse> {
         let response: SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
         };
+        let loggerDefaultParams = {};
 
-        const userInfoForRedisKey : RedisEmailKeySerialisation = {
+        const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
         };
 
@@ -32,19 +35,18 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             );
             const isKeyInRedis = await cacheDB.get(redisKey);
 
-            if(helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) { 
+            if (helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) {
                 const userInfoForCheckingExistingUser = {
                     email: helper.passStringNullParams(userInfo.email),
                     primary_country_code: helper.passStringNullParams(userInfo.primary_country_code),
                     phone_number: helper.passStringNullParams(userInfo.phone_number),
                 };
-                const columns = helper.createQueryColumn(userInfoForCheckingExistingUser);
-
+                
                 try {
-                    const userResponse = await userSignUpImpl.checkIfUserExists(columns, userInfoForCheckingExistingUser, userInfo);
+                    const userResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context);
                     response = userResponse;
                 }
-                catch(error) {
+                catch (error) {
                     throw new SignUpError(error);
                 }
             }
@@ -54,23 +56,50 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
+
+                loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                    labels: {
+                        operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
+                        type: Constants.LOKI_LOGGER_LABELS.EMAIL,
+                    },
+                    loggerDefaultParams,
+                    request: {
+                        redisKey: redisKey
+                    },
+                    response,
+                });
             }
         }
-        catch(error) {
+        catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                labels: {
+                    operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
+                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
+                },
+                loggerDefaultParams,
+                request: {
+                    userInfo: userInfo,
+                },
+                error,
+            });
+
             throw new RedisError(error);
         }
 
         return response;
     }
 
-    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface) : Promise<SignUpSuccessResponse> {
+    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<SignUpSuccessResponse> {
         let response: SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.PROCESSING,
         };
+        let loggerDefaultParams = {};
 
-        const userInfoForRedisKey : RedisEmailKeySerialisation = {
+        const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
         };
 
@@ -79,10 +108,24 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
             );
 
-            const userResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey);
+            const userResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey, context);
             response = userResponse;
         }
         catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
+                labels: {
+                    operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
+                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
+                },
+                loggerDefaultParams,
+                request: {
+                    userInfo,
+                    deviceInfo,
+                },
+                error,
+            });
+
             throw new SignUpError(error);
         }
 

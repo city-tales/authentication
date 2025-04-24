@@ -1,4 +1,4 @@
-import { createClient, Redis } from "./imports.js";
+import { createClient } from "./imports.js";
 import {
     cacheDBRedisUsername, cacheDBRedisPassword, cacheDBRedisHost, cacheDBRedisPort, queueDBRedisUsername, queueDBRedisPassword,
     queueDBRedisHost, queueDBRedisPort, queueDBRedisUrl

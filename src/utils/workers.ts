@@ -1,47 +1,108 @@
 import { Job, Worker, _ } from "../config/imports.js";
+import { logger } from "../config/loki.js";
 import { bullMQConnectionObject } from "../config/redis.js";
+import { ContextInterface } from "../database/interface/helper.js";
 import { Constants } from "./constants.js";
 import { helper } from "./helper.js";
 
 interface QueueInterface {
-    addJobToQueue(queue, queueWorker: string, params: any[], maxAttempts?: number, lockDuration?: number): Promise<void>;
+    addJobToQueue(context: ContextInterface, operation: string, type: string, queue, queueWorker: string, params: {}, maxAttempts?: number, lockDuration?: number): Promise<void>;
 }
 
 class QueueImpl implements QueueInterface {
     private workers: Map<string, Worker> = new Map();
 
-    async addJobToQueue(queue, queueWorker: string, params: any[], maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
-        await queue.add(queueWorker, { params },
-            {
-                attempts: _.defaultTo(maxAttempts, Constants.QUEUE_DB.MAX_ATTEMPTS),
-                backoff: {
-                    type: Constants.QUEUE_DB.BACKOFF_EXPONENTIAL,
-                    delay: _.defaultTo(backOffDelay, Constants.QUEUE_DB.BACKOFF_DELAY)
-                },
-                timeout: _.defaultTo(jobTimeout, Constants.QUEUE_DB.JOB_TIMEOUT),
-                lockDuration: _.defaultTo(lockDuration, Constants.QUEUE_DB.LOCK_DURATION),
+    async addJobToQueue(context: ContextInterface, operation: string, type: string, queue, queueWorker: string, params: {}, maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
+        let loggerDefaultParams = {};
+        const queueJobConfig = {
+            attempts: _.defaultTo(maxAttempts, Constants.QUEUE_DB.MAX_ATTEMPTS),
+            backoff: {
+                type: Constants.QUEUE_DB.BACKOFF_EXPONENTIAL,
+                delay: _.defaultTo(backOffDelay, Constants.QUEUE_DB.BACKOFF_DELAY)
             },
-        );
-        // add logs
+            timeout: _.defaultTo(jobTimeout, Constants.QUEUE_DB.JOB_TIMEOUT),
+            lockDuration: _.defaultTo(lockDuration, Constants.QUEUE_DB.LOCK_DURATION),
+        };
+
+        try {
+            await queue.add(queueWorker, {
+                params,
+                context,
+                operation,
+                type,
+            }, queueJobConfig);
+
+            loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
+            logger.info(Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                params,
+                queueJobConfig,
+            });
+        }
+        catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
+            logger.error(Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE, {
+                labels: {
+                    operation: operation,
+                    type: queueWorker,
+                },
+                loggerDefaultParams,
+                params,
+                queueJobConfig,
+                error,
+            });
+        }
     }
 
     startWorkers() {
         this.registerWorker(Constants.DB.SAVE_IN_DB, async (job: Job) => {
-            const [query, valuesArray, errorMessage] = job.data.params;
+            const { params, context, operation, type } = job.data;
+            const { query, valuesArray, errorMessage } = params;
+            let loggerDefaultParams = {};
+
             try {
-                await helper.executeQueryAsyncWithoutLock(query, valuesArray, errorMessage);
+                await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, operation, type);
             }
             catch (error) {
+                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REGISTER_DB_WORKER);
+                logger.error(Constants.LOKI_LOGGER_LABELS.REGISTER_JOB, {
+                    labels: {
+                        operation: operation,
+                        type: type,
+                    },
+                    loggerDefaultParams,
+                    params,
+                    error,
+                });
+
                 throw error;
             }
         });
 
         this.registerWorker(Constants.DB.SAVE_IN_REDIS, async (job: Job) => {
-            const [key, value] = job.data.params;
+            const { params, context, operation, type } = job.data;
+            const { key, value } = params;
+            let loggerDefaultParams = {};
+
             try {
-                await helper.setRedis(key, helper.serialiseRedisKeyValues(value));
+                await helper.setRedis(context, operation, type, key, helper.serialiseRedisKeyValues(value));
             }
             catch (error) {
+                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REGISTER_REDIS_WORKER);
+                logger.error(Constants.LOKI_LOGGER_LABELS.REGISTER_JOB, {
+                    labels: {
+                        operation: operation,
+                        type: type,
+                    },
+                    loggerDefaultParams,
+                    params,
+                    error,
+                });
+
                 throw error;
             }
         });
@@ -52,19 +113,41 @@ class QueueImpl implements QueueInterface {
             connection: bullMQConnectionObject.connection,
             lockDuration: helper.convertToType<number>(Constants.QUEUE_DB.LOCK_DURATION),
             concurrency: helper.convertToType<number>(Constants.QUEUE_DB.CONCURRENCY),
-
         });
 
         this.workers.set(queueName, worker);
-
+        let loggerDefaultParams = {};
+        
         worker.on('completed', job => {
-            // logging will occur
-            console.log(`✅ [${queueName}] Job ${job.id} completed`);
+            const { context, operation, type } = job?.data || {};
+
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER);
+            logger.info(Constants.LOKI_LOGGER_LABELS.PERFORM_JOB, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                job,
+                queueName,
+            });
         });
 
-        worker.on('failed', (job, err) => {
-            // logging will occur
-            console.error(`❌ [${queueName}] Job ${job?.id} failed`, err);
+        worker.on('failed', (job, error) => {
+            // DLQ Implementation
+            const { context, operation, type } = job?.data || {};
+
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER);
+            logger.error(Constants.LOKI_LOGGER_LABELS.FAILED_JOB, {
+                labels: {
+                    operation: operation,
+                    type: type,
+                },
+                loggerDefaultParams,
+                job,
+                queueName,
+                error,
+            });
         });
     }
 }
