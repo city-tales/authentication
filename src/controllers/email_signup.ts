@@ -1,7 +1,7 @@
 import { uuidv4 } from "../config/imports.js";
 import { logger } from "../config/loki.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { ContextInterface } from "../database/interface/helper.js";
+import { ContextInterface, EmailSignUpLabelInterface } from "../database/interface/logger.js";
 import { SignUpSuccessResponse } from "../database/interface/response.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { userSignUp } from "../database/repositories/user_signup.js";
@@ -11,7 +11,7 @@ import { helper } from "../utils/helper.js";
 
 interface UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpInterface): UserSignUpInterface;
-    createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface): Promise<SignUpSuccessResponse>;
+    createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
 }
 
 class UserSignUpControllerImpl implements UserSignUpController {
@@ -33,7 +33,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface): Promise<SignUpSuccessResponse> {
+    async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
         const userSchemaInfo: UserSignUpInterface = this.mapUserSchema(userInfo);
         const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
 
@@ -45,14 +45,14 @@ class UserSignUpControllerImpl implements UserSignUpController {
         let loggerDefaultParams = {};
 
         try {
-            const isExistingUser = await userSignUp.checkIfUserExists(userSchemaInfo, context);
+            const isExistingUser = await userSignUp.checkIfUserExists(userSchemaInfo, context, labels);
             if (isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
             }
             else {
                 try {
-                    const userResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo, context);
+                    const userResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
                     response = userResponse;
                 }
                 catch (error) {
@@ -62,12 +62,9 @@ class UserSignUpControllerImpl implements UserSignUpController {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: {
                     userSchemaInfo,
                     deviceSchemaInfo,

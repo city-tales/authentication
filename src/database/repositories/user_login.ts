@@ -5,18 +5,18 @@ import { LoginError } from "../../utils/errors.js";
 import { helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
 import { DeviceInterface } from "../interface/device_info.js";
-import { ContextInterface } from "../interface/helper.js";
+import { ContextInterface, EmailLoginLabelInterface } from "../interface/logger.js";
 import { LoginSuccessResponse } from "../interface/response.js";
 import { UserLoginInterface } from "../interface/user_login.js";
 import { userLoginImpl } from "../models/user_login.js";
 
 interface UserLoginRepository {
-    checkUserInRedis(email: string, context: ContextInterface);
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse>;
+    checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface);
+    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse>;
 }
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
-    async checkUserInRedis(email: string, context: ContextInterface) {
+    async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface) {
         let response: LoginSuccessResponse = {
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
@@ -46,12 +46,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 response.retryVerification = true; /* YET TO IMPLEMENT */
 
                 loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-                logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                    labels: {
-                        operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-                        type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                    },
-                    loggerDefaultParams,
+                logger.info({
+                    labels,
+                    ...loggerDefaultParams,
                     request: {
                         redisKey: redisKey,
                     },
@@ -68,12 +65,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             response.statusCode = Constants.STATUS_CODES.SERVICE_UNAVAILABLE;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: {
                     redisKey: redisKey,
                 },
@@ -88,7 +82,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         return response;
     }
 
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse> {
+    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse> {
         let response: LoginSuccessResponse = {
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
@@ -99,17 +93,14 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         let loggerDefaultParams = {};
 
         try {
-            const userResponse = await userLoginImpl.loginUser(userInfo, deviceInfo, context);
+            const userResponse = await userLoginImpl.loginUser(userInfo, deviceInfo, context, labels);
             response = userResponse;
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: {
                     userInfo,
                     deviceInfo, 

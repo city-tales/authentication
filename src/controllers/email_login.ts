@@ -1,6 +1,6 @@
 import { logger } from "../config/loki.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { ContextInterface } from "../database/interface/helper.js";
+import { ContextInterface, EmailLoginLabelInterface } from "../database/interface/logger.js";
 import { LoginSuccessResponse } from "../database/interface/response.js";
 import { GRPCUserLoginInterface, UserLoginInterface } from "../database/interface/user_login.js";
 import { userLoginRepositoryImpl } from "../database/repositories/user_login.js";
@@ -10,7 +10,7 @@ import { helper } from "../utils/helper.js";
 
 interface UserLoginController {
     mapUserLoginSchema(userInfo: GRPCUserLoginInterface): UserLoginInterface;
-    loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse>;
+    loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse>;
 }
 
 class UserLoginControllerImpl implements UserLoginController {
@@ -25,7 +25,7 @@ class UserLoginControllerImpl implements UserLoginController {
         }
     }
 
-    async loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse> {
+    async loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse> {
         const userLoginSchemaInfo: UserLoginInterface = this.mapUserLoginSchema(userInfo);
         const deviceLoginSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
 
@@ -39,23 +39,20 @@ class UserLoginControllerImpl implements UserLoginController {
         let loggerDefaultParams = {};
 
         try {
-            const isKeyInRedis = await userLoginRepositoryImpl.checkUserInRedis(userInfo.email, context);
+            const isKeyInRedis = await userLoginRepositoryImpl.checkUserInRedis(userInfo.email, context, labels);
             if (isKeyInRedis.token !== Constants.LOGIN_MESSAGE.EMPTY_TOKEN && isKeyInRedis.message !== Constants.LOGIN_MESSAGE.PROCESSING) {
                 response = isKeyInRedis;
             }
             else {
-                const userResponse = await userLoginRepositoryImpl.loginUser(userLoginSchemaInfo, deviceLoginSchemaInfo, context);
+                const userResponse = await userLoginRepositoryImpl.loginUser(userLoginSchemaInfo, deviceLoginSchemaInfo, context, labels);
                 response = userResponse;
             }
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: {
                     userLoginSchemaInfo,
                     deviceLoginSchemaInfo, 

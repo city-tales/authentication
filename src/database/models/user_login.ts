@@ -6,16 +6,16 @@ import { RedisEmailKeySerialisation } from "../../utils/interface.js";
 import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "../../utils/queue.js";
 import { queueEmployee } from "../../utils/workers.js";
 import { DeviceInterface } from "../interface/device_info.js";
-import { ContextInterface } from "../interface/helper.js";
+import { ContextInterface, EmailLoginLabelInterface } from "../interface/logger.js";
 import { LoginSuccessResponse } from "../interface/response.js";
 import { UserLoginInterface } from "../interface/user_login.js";
 
 interface UserLogin {
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse>;
+    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse>;
 }
 
 class UserLoginImpl implements UserLogin {
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface): Promise<LoginSuccessResponse> {
+    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse> {
         const response: LoginSuccessResponse = {
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
@@ -31,7 +31,7 @@ class UserLoginImpl implements UserLogin {
         let loggerDefaultParams = {};
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL);
+            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
             if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
@@ -56,8 +56,8 @@ class UserLoginImpl implements UserLogin {
                 );
                 deviceInfo.user_id = data._id;
 
-                await queueEmployee.addJobToQueue(context, Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, [deviceDataQuery, deviceValuesArray, Constants.DB_ERRORS.INSERTION_FAILED]);
-                await queueEmployee.addJobToQueue(context, Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, [redisKey, helper.serialiseRedisKeyValues(redisEmailValue)]);
+                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, [deviceDataQuery, deviceValuesArray, Constants.DB_ERRORS.INSERTION_FAILED]);
+                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, [redisKey, helper.serialiseRedisKeyValues(redisEmailValue)]);
 
                 response.token = helper.generateAuthToken(data._id, data.username);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
@@ -71,11 +71,8 @@ class UserLoginImpl implements UserLogin {
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+                labels,
+                ...loggerDefaultParams,
                 request: {
                     userInfo,
                     deviceInfo,

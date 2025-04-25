@@ -1,19 +1,18 @@
 import { Job, Worker, _ } from "../config/imports.js";
 import { logger } from "../config/loki.js";
 import { bullMQConnectionObject } from "../config/redis.js";
-import { ContextInterface } from "../database/interface/helper.js";
+import { AddJobToQueueLabelInterface, ContextInterface, RegisterWorkerLabelInterface } from "../database/interface/logger.js";
 import { Constants } from "./constants.js";
 import { helper } from "./helper.js";
 
 interface QueueInterface {
-    addJobToQueue(context: ContextInterface, operation: string, type: string, queue, queueWorker: string, params: {}, maxAttempts?: number, lockDuration?: number): Promise<void>;
+    addJobToQueue(context: ContextInterface, labels, queue, queueWorker: string, params: {}, maxAttempts?: number, lockDuration?: number): Promise<void>;
 }
 
 class QueueImpl implements QueueInterface {
     private workers: Map<string, Worker> = new Map();
 
-    async addJobToQueue(context: ContextInterface, operation: string, type: string, queue, queueWorker: string, params: {}, maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
-        let loggerDefaultParams = {};
+    async addJobToQueue(context: ContextInterface, labels, queue, queueWorker: string, params: {}, maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
         const queueJobConfig = {
             attempts: _.defaultTo(maxAttempts, Constants.QUEUE_DB.MAX_ATTEMPTS),
             backoff: {
@@ -23,87 +22,95 @@ class QueueImpl implements QueueInterface {
             timeout: _.defaultTo(jobTimeout, Constants.QUEUE_DB.JOB_TIMEOUT),
             lockDuration: _.defaultTo(lockDuration, Constants.QUEUE_DB.LOCK_DURATION),
         };
-
+        
+        const queueLabel: AddJobToQueueLabelInterface = {
+            operation: labels.operation,
+            subOperation: Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE,
+            type: labels.type,
+        };
+        let loggerDefaultParams = {};
+        
         try {
             await queue.add(queueWorker, {
                 params,
                 context,
-                operation,
-                type,
+                queueLabel,
             }, queueJobConfig);
 
             loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
-            logger.info(Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            logger.info({
+                queueLabel,
+                ...loggerDefaultParams,
                 params,
                 queueJobConfig,
             });
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
-            logger.error(Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE, {
-                labels: {
-                    operation: operation,
-                    type: queueWorker,
-                },
-                loggerDefaultParams,
+            logger.error({
+                queueLabel,
+                ...loggerDefaultParams,
                 params,
                 queueJobConfig,
                 error,
             });
+
+            throw new Error(error);
         }
     }
 
     startWorkers() {
         this.registerWorker(Constants.DB.SAVE_IN_DB, async (job: Job) => {
-            const { params, context, operation, type } = job.data;
+            const { params, context, queueLabel } = job.data;
             const { query, valuesArray, errorMessage } = params;
+
+            const registerWorkerLabel: RegisterWorkerLabelInterface = {
+                operation: queueLabel.operation,
+                subOperation: Constants.LOKI_LOGGER_LABELS.REGISTER_JOB,
+                type: queueLabel.type
+            };
             let loggerDefaultParams = {};
 
             try {
-                await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, operation, type);
+                await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
             }
             catch (error) {
-                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REGISTER_DB_WORKER);
-                logger.error(Constants.LOKI_LOGGER_LABELS.REGISTER_JOB, {
-                    labels: {
-                        operation: operation,
-                        type: type,
-                    },
-                    loggerDefaultParams,
+                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
+                logger.error({
+                    registerWorkerLabel,
+                    ...loggerDefaultParams,
                     params,
                     error,
                 });
 
-                throw error;
+                throw new Error(error);
             }
         });
 
         this.registerWorker(Constants.DB.SAVE_IN_REDIS, async (job: Job) => {
-            const { params, context, operation, type } = job.data;
+            const { params, context, queueLabel } = job.data;
             const { key, value } = params;
+
+            const registerWorkerLabel: RegisterWorkerLabelInterface = {
+                operation: queueLabel.operation,
+                subOperation: Constants.LOKI_LOGGER_LABELS.REGISTER_JOB,
+                type: queueLabel.type
+            };
             let loggerDefaultParams = {};
 
             try {
-                await helper.setRedis(context, operation, type, key, helper.serialiseRedisKeyValues(value));
+                await helper.setRedis(context, registerWorkerLabel, key, helper.serialiseRedisKeyValues(value));
             }
             catch (error) {
-                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REGISTER_REDIS_WORKER);
-                logger.error(Constants.LOKI_LOGGER_LABELS.REGISTER_JOB, {
-                    labels: {
-                        operation: operation,
-                        type: type,
-                    },
-                    loggerDefaultParams,
+                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_REDIS);
+                logger.error({
+                    registerWorkerLabel,
+                    ...loggerDefaultParams,
                     params,
                     error,
                 });
 
-                throw error;
+                throw new Error(error);
             }
         });
     }
@@ -119,15 +126,12 @@ class QueueImpl implements QueueInterface {
         let loggerDefaultParams = {};
         
         worker.on('completed', job => {
-            const { context, operation, type } = job?.data || {};
+            const { context, queueLabel } = job?.data || {};
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER);
-            logger.info(Constants.LOKI_LOGGER_LABELS.PERFORM_JOB, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.PERFORM_JOB);
+            logger.info({
+                queueLabel,
+                ...loggerDefaultParams,
                 job,
                 queueName,
             });
@@ -135,15 +139,12 @@ class QueueImpl implements QueueInterface {
 
         worker.on('failed', (job, error) => {
             // DLQ Implementation
-            const { context, operation, type } = job?.data || {};
+            const { context, queueLabel } = job?.data || {};
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER);
-            logger.error(Constants.LOKI_LOGGER_LABELS.FAILED_JOB, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.FAILED_JOB);
+            logger.error({
+                queueLabel,
+                ...loggerDefaultParams,
                 job,
                 queueName,
                 error,

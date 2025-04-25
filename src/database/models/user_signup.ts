@@ -6,16 +6,16 @@ import { UserSignUpInterface } from "../interface/user_signup.js";
 import { DeviceInterface } from "../interface/device_info.js";
 import { queueEmployee } from "../../utils/workers.js";
 import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "../../utils/queue.js";
-import { ContextInterface } from "../interface/helper.js";
+import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
 import { logger } from "../../config/loki.js";
 
 interface UserSignUp {
-    checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface): Promise<SignUpSuccessResponse>;
-    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface): Promise<SignUpSuccessResponse>;
+    checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
+    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
 }
 
 class UserSignUpImpl implements UserSignUp {
-    async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface): Promise<SignUpSuccessResponse> {
+    async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
         const tableName = Constants.AUTH_TABLES.USER_TABLE;
         const query = `SELECT _id, username FROM ${tableName} WHERE 
             (email = $1 OR $1 IS NULL) AND
@@ -36,7 +36,7 @@ class UserSignUpImpl implements UserSignUp {
         let loggerDefaultParams = {};
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL);
+            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
             if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rowCount)) {
                 if (!queryResponse.rowCount) response.message = Constants.SIGNUP_MESSAGE.NO_CONTENT;
@@ -49,7 +49,7 @@ class UserSignUpImpl implements UserSignUp {
                     _id: data._id,
                     username: data.username
                 };
-                await queueEmployee.addJobToQueue(context, Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
@@ -60,12 +60,9 @@ class UserSignUpImpl implements UserSignUp {
             response.statusCode = Constants.STATUS_CODES.BAD_GATEWAY;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: { 
                     query: query,
                     valuesArray: valuesArray,
@@ -79,7 +76,7 @@ class UserSignUpImpl implements UserSignUp {
         return response;
     }
 
-    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface): Promise<SignUpSuccessResponse> {
+    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
         const usersTableName = Constants.AUTH_TABLES.USER_TABLE;
         const deviceTableName = Constants.AUTH_TABLES.DEVICE_TABLE;
 
@@ -97,19 +94,19 @@ class UserSignUpImpl implements UserSignUp {
         let loggerDefaultParams = {};
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, usersDataQuery, usersValuesArray, Constants.DB_ERRORS.INSERTION_FAILED, Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL);
+            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, usersDataQuery, usersValuesArray, Constants.DB_ERRORS.INSERTION_FAILED, labels);
             const redisEmailValue: Object = {
                 _id: userInfo._id,
                 username: userInfo.username
             };
 
             if (helper.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount)) {
-                await queueEmployee.addJobToQueue(context, Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, {
+                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, {
                     query: deviceDataQuery,
                     valuesArray: deviceValuesArray,
                     errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
                 });
-                await queueEmployee.addJobToQueue(context, Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST, Constants.LOKI_LOGGER_LABELS.EMAIL, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
@@ -124,12 +121,9 @@ class UserSignUpImpl implements UserSignUp {
             response.statusCode = Constants.STATUS_CODES.METHOD_NOT_ALLOWED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
-                    type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: { 
                     query: usersDataQuery,
                     valuesArray: usersValuesArray,

@@ -8,14 +8,14 @@ import { Constants } from "./constants.js";
 import { RedisError } from "./errors.js";
 import { RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
-import { ContextInterface } from "../database/interface/helper.js";
+import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, operation?: string, type?: string, queryTimeout?: number);
+    executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
@@ -25,7 +25,7 @@ interface Helper {
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
-    setRedis(context: ContextInterface, operation: string, type: string, key: string, value: string): Promise<void>;
+    setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void>;
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
     parseBooleanString(truthValue: string | null | undefined): boolean;
     isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
@@ -40,8 +40,8 @@ interface Helper {
     sanitiseNumericValue(value: number | null | undefined): number | null;
     sanitiseObject(object: Object): Object;
     generateContext();
-    generateDefaultSuccessParams(tracerId: unknown, format?: string);
-    generateDefaultFailureParams(tracerId: unknown, format?: string);
+    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined);
+    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined);
 };
 
 export class HelperImpl implements Helper {
@@ -61,7 +61,7 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, operation?: string, type?: string, queryTimeout?: number) {
+    async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const cacheDB = await pool.connect();
         let loggerDefaultParams = {};
 
@@ -77,12 +77,9 @@ export class HelperImpl implements Helper {
             await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
-            logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            logger.info({
+                labels,
+                ...loggerDefaultParams,
                 queryConfig,
             });
 
@@ -91,12 +88,9 @@ export class HelperImpl implements Helper {
         catch (error) {
             await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
-            logger.info(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            logger.info({
+                labels,
+                ...loggerDefaultParams,
                 error,
             });
 
@@ -194,7 +188,7 @@ export class HelperImpl implements Helper {
         return deSerialisedObject;
     }
 
-    async setRedis(context: ContextInterface, operation: string, type: string, key: string, value: string): Promise<void> {
+    async setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
         if (switchOffForDev) return;
         
@@ -210,12 +204,9 @@ export class HelperImpl implements Helper {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels: {
-                    operation: operation,
-                    type: type,
-                },
-                loggerDefaultParams,
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
                 request: { 
                     key: key,
                     value: value,
@@ -344,31 +335,29 @@ export class HelperImpl implements Helper {
         };
     }
 
-    generateDefaultSuccessParams(tracerId: unknown, format?: string) {
+    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined) {
         const timestamp = Date.now();
 
         return {
-            context: tracerId,
-            defaultSuccessParams: {
-                tracerId,
-                timestamp,
-                success: true,
-            },
-            format: format,
+            success: true,
+            distributedTraceId: tracerId,
+            timestamp: timestamp,
+            requestType: Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE,
+            ...(this.isNeitherNullNorUndefinedNorEmpty(codeIdentifier) && { codeIdentifier }),
+            ...(this.isNeitherNullNorUndefinedNorEmpty(source) && { source })
         };
     }
 
-    generateDefaultFailureParams(tracerId: unknown, format?: string) {
+    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined) {
         const timestamp = Date.now();
 
         return {
-            context: tracerId,
-            defaultFailureParams: {
-                tracerId,
-                timestamp,
-                success: false,
-            },
-            format: format,
+            success: false,
+            distributedTraceId: tracerId,
+            timestamp: timestamp,
+            requestType: Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE,
+            ...(this.isNeitherNullNorUndefinedNorEmpty(codeIdentifier) && { codeIdentifier }),
+            ...(this.isNeitherNullNorUndefinedNorEmpty(source) && { source })
         };
     }
 }

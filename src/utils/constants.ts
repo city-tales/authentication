@@ -12,7 +12,7 @@ enum QUEUE_DB {
     DRAIN_DELAY_TIMEOUT = 300,
     BACKOFF_DELAY = 5000,
     JOB_TIMEOUT = 10000,
-    LOCK_DURATION = 10000,
+    LOCK_DURATION = 30000,
     CONCURRENCY = 5,
 };
 
@@ -59,7 +59,7 @@ enum LOKI_LOGGER {
 enum LOKI_LOGGER_LABELS {
     ADD_JOB_TO_QUEUE = 'addJobToQueue',
     JOB_ADDED = 'jobAddedToQueue',
-    REGISTER_JOB = 'registerQueue',
+    REGISTER_JOB = 'registerWorker',
     REGISTER_DB_WORKER = DB.SAVE_IN_DB,
     REGISTER_REDIS_WORKER = DB.SAVE_IN_REDIS,
     PERFORM_JOB = 'jobInAction',
