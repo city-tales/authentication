@@ -1,5 +1,5 @@
 import { Constants } from "./constants.js"
-import { Bull, Queue } from "../config/imports.js";
+import { Queue } from "../config/imports.js";
 import { bullMQConnectionObject } from "../config/redis.js";
 
 export const saveInRedisQueueEmployee = new Queue(Constants.DB.SAVE_IN_REDIS, {
