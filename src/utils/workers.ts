@@ -118,8 +118,8 @@ class QueueImpl implements QueueInterface {
     private registerWorker(queueName: string, processor: (job: Job) => Promise<void>) {
         const worker = new Worker(queueName, processor, {
             connection: bullMQConnectionObject.connection,
-            lockDuration: helper.convertToType<number>(Constants.QUEUE_DB.LOCK_DURATION),
-            concurrency: helper.convertToType<number>(Constants.QUEUE_DB.CONCURRENCY),
+            lockDuration: helper.convertToType<number>(Constants.QUEUE_DB.LOCK_DURATION, Constants.TYPE_SWITCH.NUMBER),
+            concurrency: helper.convertToType<number>(Constants.QUEUE_DB.CONCURRENCY, Constants.TYPE_SWITCH.NUMBER),
         });
 
         this.workers.set(queueName, worker);

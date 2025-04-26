@@ -90,11 +90,11 @@ enum JWT_CONFIG {
 };
 
 enum DEV_CONTROLLER {
-    SWTICH_OFF_REDIS = 'true'
+    SWTICH_OFF_REDIS = 'false'
 };
 
 enum TABLES {
-    USER_TABLE = 'user',
+    USER_TABLE = 'users',
     DEVICE_TABLE = 'device',
     AUTH_TABLE = 'auth',
 };
@@ -200,6 +200,15 @@ enum BOOLEAN_VALUES {
     FALSE = 'FALSE',
 };
 
+enum TYPE_SWITCH {
+    BOOLEAN = 'boolean',
+    NATIVE_OBJECT = 'object',
+    OBJECT = 'Object',
+    STRING = 'string',
+    NUMBER = 'number',
+    INTERFACE = 'interface',
+};
+
 export class Constants {
     static readonly PORT = process.env.port;
     static readonly DB_PORT = '5432';
@@ -228,5 +237,7 @@ export class Constants {
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
     
     static readonly STATUS_CODES = STATUS_CODES;
+
     static readonly BOOLEAN_VALUES = BOOLEAN_VALUES;
+    static readonly TYPE_SWITCH = TYPE_SWITCH;
 };

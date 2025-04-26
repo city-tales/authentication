@@ -16,13 +16,7 @@ interface UserLoginRepository {
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
     async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
-        let response: LoginResponse = {
-            name: Constants.LOGIN_MESSAGE.EMPTY,
-            token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
-            message: Constants.LOGIN_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.BAD_GATEWAY,
-            retryVerification: true,
-        };
+        let response = new LoginResponse();
         let loggerDefaultParams = {};
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
@@ -36,9 +30,10 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
             if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis));
+                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, deSerialisedObject.isEmailVerified);
+                response.name = deSerialisedObject.name;
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !deSerialisedObject.isEmailVerified;

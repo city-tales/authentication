@@ -18,11 +18,11 @@ class UserSignUpImpl implements UserSignUp {
     async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
         const userTableName = Constants.TABLES.USER_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const query = `SELECT user._id, user.name, user.username, auth.is_email_verified FROM ${userTableName} user
-                        JOIN ${authTableName} auth ON user._id = auth.user_id WHERE
-                        (user.email = $1 OR $1 IS NULL) AND
-                        (user.primary_country_code = $2 OR $2 IS NULL) AND
-                        (user.phone_number = $3 OR $3 IS NULL) LIMIT 1`;
+        const query = `SELECT users._id, users.name, users.username, auth.is_email_verified FROM ${userTableName}
+                        JOIN ${authTableName} ON users._id = auth.user_id WHERE
+                        (users.email = $1 OR $1 IS NULL) AND
+                        (users.primary_country_code = $2 OR $2 IS NULL) AND
+                        (users.phone_number = $3 OR $3 IS NULL) LIMIT 1`;
 
         const valuesArray = [
             values.email ?? null,
@@ -125,7 +125,7 @@ class UserSignUpImpl implements UserSignUp {
             };
 
             if (queryResponse.length) {
-                response.token = helper.generateAuthToken(userInfo._id, userInfo.username, false);
+                response.token = helper.generateAuthToken(userInfo._id, userInfo.username);
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 

@@ -15,7 +15,7 @@ interface UserLoginController {
 class UserLoginControllerImpl implements UserLoginController {
     mapUserLoginSchema(userInfo: GRPCUserLoginInterface): UserLoginInterface {
         const sanitisedUserLoginInfo: GRPCUserLoginInterface = helper.convertToType<GRPCUserLoginInterface>(
-            helper.sanitiseObject(userInfo)
+            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {

@@ -16,7 +16,7 @@ interface UserSignUpController {
 class UserSignUpControllerImpl implements UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpInterface): UserSignUpInterface {
         const sanitisedUserInfo: GPRCUserSignUpInterface = helper.convertToType<GPRCUserSignUpInterface>(
-            helper.sanitiseObject(userInfo),
+            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {

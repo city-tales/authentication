@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS AUTH(
     is_passwordless Boolean,
     is_mfa_enabled Boolean,
     user_id VARCHAR(256),
-    FOREIGN KEY(user_id) REFERENCES users(_id)
+    FOREIGN KEY(user_id) REFERENCES USERS(_id)
 );

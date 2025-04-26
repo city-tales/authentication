@@ -21,9 +21,9 @@ interface Helper {
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
-    generateAuthToken(_id: string, username: string, isEmailVerified: boolean): string;
+    generateAuthToken(_id: string, username: string): string;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
-    convertToType<T>(unknownValue: unknown): T;
+    convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
@@ -174,11 +174,10 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateAuthToken(_id: string, username: string, isEmailVerified: boolean): string {
+    generateAuthToken(_id: string, username: string): string {
         const payload = {
             _id: _id,
             username: username,
-            isEmailVerified: isEmailVerified,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
@@ -193,9 +192,28 @@ export class HelperImpl implements Helper {
         return response as T;
     }
 
-    convertToType<T>(response: unknown): T {
+    convertToType<T>(response: any, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T {
+        if (type === 'boolean') {
+            return (response === 'true' || response === true) as unknown as T;
+        }
+        if (type === 'number') {
+            return Number(response) as unknown as T;
+        }
+        if (type === 'string') {
+            return String(response) as unknown as T;
+        }
+        if (type === 'object' || type === 'Object') {
+            if (typeof response === 'string') {
+                return JSON.parse(response) as T;
+            }
+            return response as T;
+        }
+        if (type === 'interface') {
+            return response as T;
+        }
         return response as T;
     }
+    
 
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
         return {
@@ -212,14 +230,20 @@ export class HelperImpl implements Helper {
     }
 
     parseRedisValueToObject(value: string) {
-        const serialisedString = value.replace(/'/g, '"');
+        let serialisedString = value
+            .replace(/'/g, '"')
+            .replace(/([{,]\s*)("?)([a-zA-Z0-9_]+)\2(?=\s*:)/g, '$1"$3"');
+
+        if (serialisedString.startsWith('"') && serialisedString.endsWith('"')) {
+            serialisedString = serialisedString.slice(1, -1);
+        }
         const deSerialisedObject = JSON.parse(serialisedString);
 
         return deSerialisedObject;
     }
 
     async setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void> {
-        const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
+        const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS, Constants.TYPE_SWITCH.BOOLEAN);
         if (switchOffForDev) return;
 
         let loggerDefaultParams = {};
@@ -257,7 +281,7 @@ export class HelperImpl implements Helper {
 
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: string): DeviceInterface {
         const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
-            helper.sanitiseObject(deviceInfo),
+            helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
@@ -299,11 +323,11 @@ export class HelperImpl implements Helper {
     }
 
     passStringNullParams(value: string | null | undefined): string | null {
-        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value);
+        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING);
     }
 
     passNumberNullParams(value: number | null | undefined): number | null {
-        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<number>(value);
+        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
     generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string {
@@ -332,7 +356,7 @@ export class HelperImpl implements Helper {
         if (this.isNeitherNullNorUndefinedNorEmpty(userInfo.phoneNumber)) {
             phonePrefix = userInfo.phoneNumber!.split('-')[1];
             baseUsername += (this.isNeitherNullNorUndefinedNorEmpty(
-                helper.convertToType<string>(phonePrefix)) ? `${phonePrefix}-` : `${faker.number.int(
+                helper.convertToType<string>(phonePrefix, Constants.TYPE_SWITCH.STRING)) ? `${phonePrefix}-` : `${faker.number.int(
                     { min: 100, max: 999 })
                 }-`)
         }
@@ -348,11 +372,11 @@ export class HelperImpl implements Helper {
     }
 
     sanitiseStringValue(value: string | null | undefined): string | null {
-        return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value) : null;
+        return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING) : null;
     }
 
     sanitiseNumericValue(value: number | null | undefined): number | null {
-        return this.isNeitherNullNorUndefined(value) ? this.convertToType<number>(value) : null;
+        return this.isNeitherNullNorUndefined(value) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
     }
 
     sanitiseObject(object: Object): Object {

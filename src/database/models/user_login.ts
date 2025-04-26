@@ -25,9 +25,9 @@ class UserLoginImpl implements UserLogin {
 
         const userTableName = Constants.TABLES.USER_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const query = `SELECT user._id, user.name, user.username, user.email, user.primary_country_code, user.phone_number, auth.is_email_verified from ${userTableName} user 
-                        JOIN ${authTableName} auth ON user._id = auth.user_id
-                        WHERE user.email = $1 AND user.password = $2 LIMIT 1`;
+        const query = `SELECT users._id, users.name, users.username, users.email, users.primary_country_code, users.phone_number, auth.is_email_verified from ${userTableName} 
+                        JOIN ${authTableName} ON users._id = auth.user_id
+                        WHERE users.email = $1 AND users.password = $2 LIMIT 1`;
 
         const valuesArray = Object.values(userInfo);
         let loggerDefaultParams = {};
@@ -50,23 +50,36 @@ class UserLoginImpl implements UserLogin {
                     helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
                 );
 
-                const redisEmailValue = helper.serialiseRedisKeyValues(
-                    helper.convertToType<Object>({
-                        _id: data._id,
-                        name: data.name,
-                        username: data.username,
-                        isEmailVerified: data.is_email_verified,
-                    })
-                );
+                const redisEmailValue: Object = {
+                    _id: data._id,
+                    name: data.name,
+                    username: data.username,
+                    isEmailVerified: data.is_email_verified,
+                };
+
                 deviceInfo.user_id = data._id;
 
-                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, [deviceDataQuery, deviceValuesArray, Constants.DB_ERRORS.INSERTION_FAILED]);
-                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, [redisKey, helper.serialiseRedisKeyValues(redisEmailValue)]);
+                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, {
+                    query: deviceDataQuery,
+                    valuesArray: deviceValuesArray,
+                    errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
+                });
+                
+                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                    key: redisKey,
+                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                });
 
-                response.token = helper.generateAuthToken(data._id, data.username, data.is_email_verified);
+                response.name = data.name;
+                response.token = helper.generateAuthToken(data._id, data.username);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !data.is_email_verified;
+            }
+            else {
+                response.message = Constants.LOGIN_MESSAGE.NO_CONTENT;
+                response.statusCode = Constants.STATUS_CODES.OK;
+                response.retryVerification = false;
             }
         }
         catch (error) {
