@@ -1,12 +1,12 @@
 export interface AuthVerificationInterface {
     _id: string,
-    isEmailVerified: Boolean,
-    isGoogleVerified: Boolean,
-    isAppleVerified: Boolean,
-    isPasswordLess: Boolean,
+    isEmailVerified: boolean,
+    isGoogleVerified: boolean,
+    isAppleVerified: boolean,
+    isPasswordLess: boolean,
     isMFAEnabled: {
-        isPhoneVerified: Boolean,
-        enabled: Boolean,
+        isPhoneVerified: boolean,
+        enabled: boolean,
     },
     user_id: string,
 };

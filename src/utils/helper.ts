@@ -1,21 +1,23 @@
 import { privateKey } from "../config/config.js";
 import { crypto, adjectives, lodash, nouns, uniqueUsernameGenerator, faker, jwt } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
-import { client } from "../config/redis.js";
+import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { v4 as uuidv4 } from 'uuid';
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
 import { RedisError } from "./errors.js";
 import { RedisEmailKeySerialisation } from "./interface.js";
+import { MultipleQueryObject } from "./custom_types.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    executeQueryAsyncWithoutLock(query: unknown, errorMessage?: string, queryTimeout?: number);
-    isInsertQuerySuccessful(queryCommand: string, rowCount: number): Boolean;
-    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): Boolean;
+    executeQueryAsyncWithoutLock(query: unknown, valuesArray?, errorMessage?: string, queryTimeout?: number);
+    executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number);
+    isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
+    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
     generateAuthToken(_id: string, username: string): string;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown): T;
@@ -23,11 +25,12 @@ interface Helper {
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
     setRedis(key: string, value: string): Promise<void>;
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface) : DeviceInterface;
-    parseBooleanString(truthValue: string | null | undefined): Boolean;
-    isEitherNullOrUndefined(value: number | string | null | undefined): Boolean;
-    isNeitherNullNorUndefined(value: number | string | null | undefined): Boolean;
-    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): Boolean;
+    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string) : DeviceInterface;
+    parseBooleanString(truthValue: string | null | undefined): boolean;
+    isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
+    isEitherNullOrUndefinedOrEmpty(value: number | string | null | undefined): boolean;
+    isNeitherNullNorUndefined(value: number | string | null | undefined): boolean;
+    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): boolean;
     passStringNullParams(value: string | null | undefined): string | null;
     passNumberNullParams(value: number | null | undefined): number | null;
     generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string;
@@ -54,38 +57,72 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    async executeQueryAsyncWithoutLock(query: any, errorMessage?: string, queryTimeout?: number) {
-        const client = await pool.connect();
+    async executeQueryAsyncWithoutLock(query: any, valuesArray?, errorMessage?: string, queryTimeout?: number) {
+        const cacheDB = await pool.connect();
         try {
-            await client.query(Constants.DB_COMMANDS.BEGIN)
+            await cacheDB.query(Constants.DB_COMMANDS.BEGIN)
 
             const queryConfig = {
                 text: query,
                 queryTimeout: queryTimeout || Constants.DB_TIMEOUTS.QUERY_TIMEOUT
             };
-            const response = await client.query(queryConfig);
+            const response = await cacheDB.query(queryConfig, valuesArray);
 
-            await client.query(Constants.DB_COMMANDS.COMMIT);
+            await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
             return response;
         }
         catch (error) {
-            await client.query(Constants.DB_COMMANDS.ROLLBACK);
+            await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
             if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
                 throw new Error(error.message);
 
             throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
         }
         finally {
-            client.release();
+            cacheDB.release();
         }
     }
 
-    isInsertQuerySuccessful(queryCommand: string, rowCount: number): Boolean {
+    async executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number) {
+        const cacheDB = await pool.connect();
+        const response: string[] = [];
+        try {
+            await cacheDB.query(Constants.DB_COMMANDS.BEGIN);
+
+            for(const {query, valuesArray} of queries) {
+                const queryConfig = {
+                    text: query,
+                    queryTimeout: queryTimeout || Constants.DB_TIMEOUTS.QUERY_TIMEOUT
+                };
+                const queryResponse = await cacheDB.query(queryConfig, valuesArray);
+
+                if(this.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount)) 
+                    response.push(JSON.stringify(queryResponse));   
+                else 
+                    throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
+            }
+
+            await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
+            return response;
+        }
+        catch (error) {
+            await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
+            if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
+                throw new Error(error.message);
+
+            throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
+        }
+        finally {
+            cacheDB.release();
+        }
+    }
+
+    isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean {
         if (queryCommand === Constants.DB_COMMANDS.INSERT && rowCount) return true;
         return false;
     }
 
-    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): Boolean {
+    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean {
         if (queryCommand === Constants.DB_COMMANDS.SELECT && fieldCount) return true;
         return false;
     }
@@ -134,9 +171,12 @@ export class HelperImpl implements Helper {
     }
 
     async setRedis(key: string, value: string): Promise<void> {
+        const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
+        if(switchOffForDev) return;
+
         try {
-            await client.set(key, value, {
-                EX: Constants.DB_TIMEOUTS.REDIS_TIMEOUT
+            await cacheDB.set(key, value, {
+                EX: Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
             });
         }
         catch (error) {
@@ -144,7 +184,7 @@ export class HelperImpl implements Helper {
         }
     }
 
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface): DeviceInterface {
+    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: string): DeviceInterface {
         const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
             helper.sanitiseObject(deviceInfo),
         );
@@ -158,24 +198,29 @@ export class HelperImpl implements Helper {
             platform: sanitisedDeviceInfo.platform,
             device_name: sanitisedDeviceInfo.deviceName,
             login_time: sanitisedDeviceInfo.loginTime || Constants.CURRENT_TIME,
+            user_id: userId,
         };
     }
 
-    parseBooleanString(truthValue: string | null | undefined): Boolean {
+    parseBooleanString(truthValue: string | null | undefined): boolean {
         if (this.isNeitherNullNorUndefined(truthValue))
             return truthValue === Constants.BOOLEAN_VALUES.TRUE ? true : false;
         return false;
     }
 
-    isEitherNullOrUndefined(value: number | string | null | undefined): Boolean {
+    isEitherNullOrUndefined(value: number | string | null | undefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefined(value: number | string | null | undefined): Boolean {
-        return (value !== null || value !== undefined) ? true : false;
+    isEitherNullOrUndefinedOrEmpty(value: number | string | null | undefined): boolean {
+        return (value === null || value === undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): Boolean {
+    isNeitherNullNorUndefined(value: number | string | null | undefined): boolean {
+        return (value !== null && value !== undefined) ? true : false;
+    }
+
+    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): boolean {
         if (this.isNeitherNullNorUndefined(value)) {
             return this.trimStringValue(value as string) !== "" ? true : false;
         }

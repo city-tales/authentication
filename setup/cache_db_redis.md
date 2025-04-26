@@ -21,7 +21,7 @@
 ## Environment Variables
 
 ```env
-REDIS_USERNAME=<your_redis_username>
-REDIS_PASSWORD=<your_redis_password>
-REDIS_HOST=<your_redis_host>
-REDIS_PORT=<your_redis_port>
+CACHE_DB_REDIS_USERNAME=<your_redis_username>
+CACHE_DB_REDIS_PASSWORD=<your_redis_password>
+CACHE_DB_REDIS_HOST=<your_redis_host>
+CACHE_DB_REDIS_PORT=<your_redis_port>
