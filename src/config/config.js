@@ -17,6 +17,10 @@ const queueDBRedisPassword = process.env.QUEUE_DB_REDIS_PASSWORD;
 const queueDBRedisHost = process.env.QUEUE_DB_REDIS_HOST;
 const queueDBRedisPort = parseInt(process.env.QUEUE_DB_REDIS_PORT);
 const queueDBRedisUrl = process.env.QUEUE_DB_REDIS_URL;
+const lokiLoggerName = process.env.LOKI_LOGGER_NAME;
+const lokiLoggerUrl = process.env.LOKI_LOGGER_URL;
+const lokiLoggerUser = process.env.LOKI_LOGGER_USER;
+const lokiLoggerToken = process.env.LOKI_LOGGER_TOKEN;
 const privateKey = process.env.JWT_PRIVATE_KEY;
 
 export {
@@ -36,5 +40,9 @@ export {
     queueDBRedisHost,
     queueDBRedisPort,
     queueDBRedisUrl,
+    lokiLoggerName,
+    lokiLoggerUrl,
+    lokiLoggerUser,
+    lokiLoggerToken,
     privateKey,
 };

@@ -1,5 +1,6 @@
 import "../utils/queue.js";
 import "./postgres.js";
+import "./loki.js";
 import { cacheDB, queueDB } from "./redis.js";
 import { cacheDBRedisPort, queueDBRedisPort } from "./config.js";
 import { queueEmployee } from "../utils/workers.js";

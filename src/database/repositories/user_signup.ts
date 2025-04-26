@@ -7,22 +7,24 @@ import { Constants } from "../../utils/constants.js";
 import { RedisError, SignUpError } from "../../utils/errors.js";
 import { cacheDB } from "../../config/redis.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
-import { queueEmployee } from "../../utils/workers.js";
+import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
+import { logger } from "../../config/loki.js";
 
 interface UserSignUpRepository {
-    checkIfUserExists(userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse>;
-    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface) : Promise<SignUpSuccessResponse>;
+    checkIfUserExists(userInfo: UserSignUpInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
+    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
 }
 
 class UserSignUpRepositoryImpl implements UserSignUpRepository {
-    async checkIfUserExists(userInfo: UserSignUpInterface) : Promise<SignUpSuccessResponse> {
+    async checkIfUserExists(userInfo: UserSignUpInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
         let response: SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
         };
+        let loggerDefaultParams = {};
 
-        const userInfoForRedisKey : RedisEmailKeySerialisation = {
+        const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
         };
 
@@ -32,19 +34,18 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             );
             const isKeyInRedis = await cacheDB.get(redisKey);
 
-            if(helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) { 
+            if (helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) {
                 const userInfoForCheckingExistingUser = {
                     email: helper.passStringNullParams(userInfo.email),
                     primary_country_code: helper.passStringNullParams(userInfo.primary_country_code),
                     phone_number: helper.passStringNullParams(userInfo.phone_number),
                 };
-                const columns = helper.createQueryColumn(userInfoForCheckingExistingUser);
-
+                
                 try {
-                    const userResponse = await userSignUpImpl.checkIfUserExists(columns, userInfoForCheckingExistingUser, userInfo);
+                    const userResponse: SignUpSuccessResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context, labels);
                     response = userResponse;
                 }
-                catch(error) {
+                catch (error) {
                     throw new SignUpError(error);
                 }
             }
@@ -54,23 +55,44 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
+
+                loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                logger.info({
+                    labels,
+                    ...loggerDefaultParams,
+                    request: {
+                        redisKey: redisKey
+                    },
+                    response,
+                });
             }
         }
-        catch(error) {
+        catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
+                request: {
+                    userInfo: userInfo,
+                },
+                error,
+            });
+
             throw new RedisError(error);
         }
 
         return response;
     }
 
-    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface) : Promise<SignUpSuccessResponse> {
+    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
         let response: SignUpSuccessResponse = {
             token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
             message: Constants.SIGNUP_MESSAGE.PROCESSING,
             statusCode: Constants.STATUS_CODES.PROCESSING,
         };
+        let loggerDefaultParams = {};
 
-        const userInfoForRedisKey : RedisEmailKeySerialisation = {
+        const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
         };
 
@@ -79,10 +101,21 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
             );
 
-            const userResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey);
+            const userResponse: SignUpSuccessResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey, context, labels);
             response = userResponse;
         }
         catch (error) {
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
+                request: {
+                    userInfo,
+                    deviceInfo,
+                },
+                error,
+            });
+
             throw new SignUpError(error);
         }
 
