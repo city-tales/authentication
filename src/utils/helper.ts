@@ -5,21 +5,23 @@ import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
-import { RedisError } from "./errors.js";
 import { RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
+import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
+import { RedisResponse } from "../database/interface/response.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
+    createAuthSchema(userId: string): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
-    executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number);
+    executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
-    generateAuthToken(_id: string, username: string): string;
+    generateAuthToken(_id: string, username: string, isEmailVerified: boolean): string;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
@@ -61,6 +63,18 @@ export class HelperImpl implements Helper {
         return value;
     }
 
+    createAuthSchema(userId: string): AuthVerificationInterface {
+        return {
+            _id: uuidv4(),
+            is_email_verified: false,
+            is_google_verified: false,
+            is_apple_verified: false,
+            is_passwordless: false,
+            is_mfa_enabled: false,
+            user_id: userId,
+        };
+    }
+
     async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         let loggerDefaultParams = {};
@@ -87,8 +101,9 @@ export class HelperImpl implements Helper {
         }
         catch (error) {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
+
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.info({
+            logger.error({
                 labels,
                 ...loggerDefaultParams,
                 error,
@@ -101,9 +116,10 @@ export class HelperImpl implements Helper {
         }
     }
 
-    async executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number) {
+    async executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         const response: string[] = [];
+        let loggerDefaultParams = {};
         try {
             await dB.query(Constants.DB_COMMANDS.BEGIN);
 
@@ -121,14 +137,27 @@ export class HelperImpl implements Helper {
             }
 
             await dB.query(Constants.DB_COMMANDS.COMMIT);
+
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
+            logger.info({
+                labels,
+                ...loggerDefaultParams,
+                queries,
+            });
+
             return response;
         }
         catch (error) {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
-                throw new Error(error.message);
 
-            throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
+            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
+                error,
+            });
+
+            throw new Error(error.message);
         }
         finally {
             dB.release();
@@ -145,10 +174,11 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateAuthToken(_id: string, username: string): string {
+    generateAuthToken(_id: string, username: string, isEmailVerified: boolean): string {
         const payload = {
             _id: _id,
             username: username,
+            isEmailVerified: isEmailVerified,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
@@ -221,7 +251,7 @@ export class HelperImpl implements Helper {
                 error,
             });
 
-            throw new RedisError(error.message);
+            throw new RedisResponse(error);
         }
     }
 

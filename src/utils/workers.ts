@@ -132,7 +132,7 @@ class QueueImpl implements QueueInterface {
             logger.info({
                 queueLabel,
                 ...loggerDefaultParams,
-                job,
+                ...job,
                 queueName,
             });
         });
@@ -145,7 +145,7 @@ class QueueImpl implements QueueInterface {
             logger.error({
                 queueLabel,
                 ...loggerDefaultParams,
-                job,
+                ...job,
                 queueName,
                 error,
             });

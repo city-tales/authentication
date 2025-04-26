@@ -1,13 +1,42 @@
-export interface SignUpSuccessResponse {
-    token: string,
-    message: string,
-    statusCode: number,
-};
+import { Constants } from "../../utils/constants.js";
+import { helper } from "../../utils/helper.js";
 
-export interface LoginSuccessResponse {
-    token: string,
-    message: string,
-    verified: boolean,
-    statusCode: number,
-    retryVerification: boolean,
-};
+export class SignUpResponse {
+    public token: string;
+    public message: string;
+    public statusCode: number;
+    public verified: boolean;
+
+    constructor(response?: SignUpResponse) {
+        this.token = response?.token ?? Constants.SIGNUP_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.SIGNUP_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.NOT_ACCEPTABLE;
+        this.verified = response?.verified ?? helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE);
+    }
+}
+
+export class RedisResponse extends SignUpResponse {
+    constructor(response?: RedisResponse) {
+        super(response);
+        this.token = response?.token ?? Constants.SIGNUP_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.REDIS_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+    }
+}
+
+export class LoginResponse {
+    public name: string;
+    public token: string;
+    public message: string;
+    public statusCode: number;
+    public retryVerification: boolean;
+
+    constructor(response?: LoginResponse) {
+        this.name = response?.name ?? Constants.LOGIN_MESSAGE.EMPTY;
+        this.token = response?.token ?? Constants.LOGIN_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.LOGIN_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+        this.retryVerification = response?.retryVerification ?? helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE);
+    }
+}
+

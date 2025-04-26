@@ -1,7 +1,7 @@
 enum DB {
     SAVE_IN_REDIS = 'saveInRedis',
     SAVE_IN_DB = 'saveInDB',
-    AUTHENTICATION_QUEUE_DB = 'authentication-queue-db',
+    SEND_EMAIL_FOR_VERIFICATION = 'sendEmailForVerification'
 };
 
 enum QUEUE_DB {
@@ -21,6 +21,7 @@ enum DB_TIMEOUTS {
     QUERY_TIMEOUT = 10000,
     LOCK_TIMEOUT = 10000,
     IDLE_TIMEOUT = 10000,
+    POSTGRESQL_DB_TIMEOUT = 10000,
     CACHE_DB_REDIS_TIMEOUT = 600,
     QUEUE_DB_REDIS_TIMEOUT = 10000,
 };
@@ -78,6 +79,7 @@ enum LOKI_LOGGER_LABELS {
     MODELS = 'models',
     QUEUE = 'queue',
     WORKER = 'worker',
+    POSTGRESQL_DB = 'postgresql-db',
     CACHE_DB = 'cache-db',
     QUEUE_DB = 'queue-db'
 };
@@ -91,9 +93,10 @@ enum DEV_CONTROLLER {
     SWTICH_OFF_REDIS = 'true'
 };
 
-enum AUTH_TABLES {
-    USER_TABLE = 'users',
-    DEVICE_TABLE = 'device'
+enum TABLES {
+    USER_TABLE = 'user',
+    DEVICE_TABLE = 'device',
+    AUTH_TABLE = 'auth',
 };
 
 enum REDIS_MESSAGE {
@@ -102,6 +105,7 @@ enum REDIS_MESSAGE {
 };
 
 enum SIGNUP_MESSAGE {
+    EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     CREATED = 'Account has been created successfully',
@@ -111,6 +115,7 @@ enum SIGNUP_MESSAGE {
 };
 
 enum LOGIN_MESSAGE {
+    EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     NOT_VERIFIED = 'Please verify email',
@@ -215,7 +220,7 @@ export class Constants {
 
     static readonly DEV_CONTROLLER = DEV_CONTROLLER;
 
-    static readonly AUTH_TABLES = AUTH_TABLES;
+    static readonly TABLES = TABLES;
     
     static readonly REDIS_MESSAGE = REDIS_MESSAGE;
     

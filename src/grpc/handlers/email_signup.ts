@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { userSignUpControllerImpl } from "../../controllers/email_signup.js";
 import { EmailSignUpLabelInterface } from "../../database/interface/logger.js";
-import { SignUpSuccessResponse } from "../../database/interface/response.js";
+import { SignUpResponse } from "../../database/interface/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -15,11 +15,11 @@ export const emailSignUp = async (call, callback) => {
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
     };
 
-    let toRet: SignUpSuccessResponse;
+    let toRet: SignUpResponse;
     let loggerDefaultParams = {};
 
     try {
-        const response: SignUpSuccessResponse = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
+        const response: SignUpResponse = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
         toRet = response;
 
         loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);

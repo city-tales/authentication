@@ -1,28 +1,27 @@
 import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
-import { LoginError } from "../../utils/errors.js";
 import { helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
 import { DeviceInterface } from "../interface/device_info.js";
 import { ContextInterface, EmailLoginLabelInterface } from "../interface/logger.js";
-import { LoginSuccessResponse } from "../interface/response.js";
+import { LoginResponse } from "../interface/response.js";
 import { UserLoginInterface } from "../interface/user_login.js";
 import { userLoginImpl } from "../models/user_login.js";
 
 interface UserLoginRepository {
-    checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface);
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse>;
+    checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
+    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
 }
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
-    async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface) {
-        let response: LoginSuccessResponse = {
+    async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+        let response: LoginResponse = {
+            name: Constants.LOGIN_MESSAGE.EMPTY,
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
-            verified: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
-            statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
-            retryVerification: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
+            statusCode: Constants.STATUS_CODES.BAD_GATEWAY,
+            retryVerification: true,
         };
         let loggerDefaultParams = {};
 
@@ -39,11 +38,10 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis));
 
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, deSerialisedObject.isEmailVerified);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
-                response.verified = true; /* YET TO IMPLEMENT */
-                response.retryVerification = true; /* YET TO IMPLEMENT */
+                response.retryVerification = !deSerialisedObject.isEmailVerified;
 
                 loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
                 logger.info({
@@ -62,7 +60,6 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         }
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.REDIS_MESSAGE.FAILED;
-            response.statusCode = Constants.STATUS_CODES.SERVICE_UNAVAILABLE;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
             logger.error({
@@ -74,26 +71,18 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 error,
             });
 
-            throw new LoginError(
-                helper.convertToClassType<LoginError>(response, LoginError)
-            );
+            throw new LoginResponse(response);
         }
 
         return response;
     }
 
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse> {
-        let response: LoginSuccessResponse = {
-            token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
-            message: Constants.LOGIN_MESSAGE.PROCESSING,
-            verified: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
-            statusCode: Constants.STATUS_CODES.INTERNAL_SERVER_ERROR,
-            retryVerification: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
-        };
+    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+        let response = new LoginResponse();
         let loggerDefaultParams = {};
 
         try {
-            const userResponse = await userLoginImpl.loginUser(userInfo, deviceInfo, context, labels);
+            const userResponse: LoginResponse = await userLoginImpl.loginUser(userInfo, deviceInfo, context, labels);
             response = userResponse;
         }
         catch (error) {
@@ -108,7 +97,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 error: error,
             });
 
-            throw new LoginError(error);
+            throw new LoginResponse(error);
         }
 
         return response;

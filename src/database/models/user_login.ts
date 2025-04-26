@@ -1,32 +1,34 @@
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
-import { LoginError } from "../../utils/errors.js";
 import { helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
 import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "../../utils/queue.js";
 import { queueEmployee } from "../../utils/workers.js";
 import { DeviceInterface } from "../interface/device_info.js";
 import { ContextInterface, EmailLoginLabelInterface } from "../interface/logger.js";
-import { LoginSuccessResponse } from "../interface/response.js";
+import { LoginResponse } from "../interface/response.js";
 import { UserLoginInterface } from "../interface/user_login.js";
 
 interface UserLogin {
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse>;
+    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
 }
 
 class UserLoginImpl implements UserLogin {
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginSuccessResponse> {
-        const response: LoginSuccessResponse = {
+    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+        const response: LoginResponse = {
+            name: Constants.LOGIN_MESSAGE.EMPTY,
             token: Constants.LOGIN_MESSAGE.EMPTY_TOKEN,
             message: Constants.LOGIN_MESSAGE.PROCESSING,
-            verified: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
             statusCode: Constants.STATUS_CODES.INTERNAL_SERVER_ERROR,
-            retryVerification: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE),
+            retryVerification: true,
         };
 
-        const tableName = Constants.AUTH_TABLES.USER_TABLE;
-        const query = `SELECT _id, username, email, primary_country_code, phone_number from ${tableName} WHERE 
-            email = $1 AND password = $2 LIMIT 1`;
+        const userTableName = Constants.TABLES.USER_TABLE;
+        const authTableName = Constants.TABLES.AUTH_TABLE;
+        const query = `SELECT user._id, user.name, user.username, user.email, user.primary_country_code, user.phone_number, auth.is_email_verified from ${userTableName} user 
+                        JOIN ${authTableName} auth ON user._id = auth.user_id
+                        WHERE user.email = $1 AND user.password = $2 LIMIT 1`;
+
         const valuesArray = Object.values(userInfo);
         let loggerDefaultParams = {};
 
@@ -36,7 +38,7 @@ class UserLoginImpl implements UserLogin {
             if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
 
-                const deviceTableName = Constants.AUTH_TABLES.DEVICE_TABLE;
+                const deviceTableName = Constants.TABLES.DEVICE_TABLE;
                 const deviceDataQuery = `INSERT INTO ${deviceTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
                 const deviceValuesArray = Object.values(deviceInfo);
 
@@ -51,7 +53,9 @@ class UserLoginImpl implements UserLogin {
                 const redisEmailValue = helper.serialiseRedisKeyValues(
                     helper.convertToType<Object>({
                         _id: data._id,
+                        name: data.name,
                         username: data.username,
+                        isEmailVerified: data.is_email_verified,
                     })
                 );
                 deviceInfo.user_id = data._id;
@@ -59,15 +63,14 @@ class UserLoginImpl implements UserLogin {
                 await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, [deviceDataQuery, deviceValuesArray, Constants.DB_ERRORS.INSERTION_FAILED]);
                 await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, [redisKey, helper.serialiseRedisKeyValues(redisEmailValue)]);
 
-                response.token = helper.generateAuthToken(data._id, data.username);
+                response.token = helper.generateAuthToken(data._id, data.username, data.is_email_verified);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
-                response.verified = true; // to be fetched from auth table
                 response.statusCode = Constants.STATUS_CODES.OK;
+                response.retryVerification = !data.is_email_verified;
             }
         }
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
-            response.statusCode = Constants.STATUS_CODES.SERVICE_UNAVAILABLE;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
@@ -80,9 +83,7 @@ class UserLoginImpl implements UserLogin {
                 error,
             });
 
-            throw new LoginError(
-                helper.convertToClassType<LoginError>(response, LoginError)
-            );
+            throw new LoginResponse(response);
         }
 
         return response;
