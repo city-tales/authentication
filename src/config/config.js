@@ -40,9 +40,9 @@ export {
     queueDBRedisHost,
     queueDBRedisPort,
     queueDBRedisUrl,
-    privateKey,
     lokiLoggerName,
     lokiLoggerUrl,
     lokiLoggerUser,
     lokiLoggerToken,
+    privateKey,
 };

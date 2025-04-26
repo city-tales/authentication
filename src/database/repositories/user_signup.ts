@@ -7,7 +7,6 @@ import { Constants } from "../../utils/constants.js";
 import { RedisError, SignUpError } from "../../utils/errors.js";
 import { cacheDB } from "../../config/redis.js";
 import { RedisEmailKeySerialisation } from "../../utils/interface.js";
-import { queueEmployee } from "../../utils/workers.js";
 import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
 import { logger } from "../../config/loki.js";
 
@@ -43,7 +42,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 };
                 
                 try {
-                    const userResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context, labels);
+                    const userResponse: SignUpSuccessResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context, labels);
                     response = userResponse;
                 }
                 catch (error) {
@@ -102,7 +101,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
             );
 
-            const userResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey, context, labels);
+            const userResponse: SignUpSuccessResponse = await userSignUpImpl.createUser(userInfo, deviceInfo, redisKey, context, labels);
             response = userResponse;
         }
         catch (error) {

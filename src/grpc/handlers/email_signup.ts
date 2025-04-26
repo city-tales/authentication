@@ -19,7 +19,7 @@ export const emailSignUp = async (call, callback) => {
     let loggerDefaultParams = {};
 
     try {
-        const response = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
+        const response: SignUpSuccessResponse = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
         toRet = response;
 
         loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);

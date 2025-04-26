@@ -1,5 +1,5 @@
 import { privateKey } from "../config/config.js";
-import { crypto, adjectives, lodash, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
+import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
@@ -40,8 +40,8 @@ interface Helper {
     sanitiseNumericValue(value: number | null | undefined): number | null;
     sanitiseObject(object: Object): Object;
     generateContext();
-    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined);
-    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined);
+    generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
+    generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
 };
 
 export class HelperImpl implements Helper {
@@ -62,21 +62,21 @@ export class HelperImpl implements Helper {
     }
 
     async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
-        const cacheDB = await pool.connect();
+        const dB = await pool.connect();
         let loggerDefaultParams = {};
 
         try {
-            await cacheDB.query(Constants.DB_COMMANDS.BEGIN)
+            await dB.query(Constants.DB_COMMANDS.BEGIN)
 
             const queryConfig = {
                 text: query,
                 queryTimeout: queryTimeout ?? Constants.DB_TIMEOUTS.QUERY_TIMEOUT
             };
-            const response = await cacheDB.query(queryConfig, valuesArray);
+            const response = await dB.query(queryConfig, valuesArray);
 
-            await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
+            await dB.query(Constants.DB_COMMANDS.COMMIT);
 
-            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logger.info({
                 labels,
                 ...loggerDefaultParams,
@@ -86,8 +86,8 @@ export class HelperImpl implements Helper {
             return response;
         }
         catch (error) {
-            await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
-            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            await dB.query(Constants.DB_COMMANDS.ROLLBACK);
+            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logger.info({
                 labels,
                 ...loggerDefaultParams,
@@ -97,22 +97,22 @@ export class HelperImpl implements Helper {
             throw new Error(error.message);
         }
         finally {
-            cacheDB.release();
+            dB.release();
         }
     }
 
     async executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number) {
-        const cacheDB = await pool.connect();
+        const dB = await pool.connect();
         const response: string[] = [];
         try {
-            await cacheDB.query(Constants.DB_COMMANDS.BEGIN);
+            await dB.query(Constants.DB_COMMANDS.BEGIN);
 
             for (const { query, valuesArray } of queries) {
                 const queryConfig = {
                     text: query,
                     queryTimeout: queryTimeout || Constants.DB_TIMEOUTS.QUERY_TIMEOUT
                 };
-                const queryResponse = await cacheDB.query(queryConfig, valuesArray);
+                const queryResponse = await dB.query(queryConfig, valuesArray);
 
                 if (this.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount))
                     response.push(JSON.stringify(queryResponse));
@@ -120,18 +120,18 @@ export class HelperImpl implements Helper {
                     throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
             }
 
-            await cacheDB.query(Constants.DB_COMMANDS.COMMIT);
+            await dB.query(Constants.DB_COMMANDS.COMMIT);
             return response;
         }
         catch (error) {
-            await cacheDB.query(Constants.DB_COMMANDS.ROLLBACK);
+            await dB.query(Constants.DB_COMMANDS.ROLLBACK);
             if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
                 throw new Error(error.message);
 
             throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
         }
         finally {
-            cacheDB.release();
+            dB.release();
         }
     }
 
@@ -191,7 +191,7 @@ export class HelperImpl implements Helper {
     async setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
         if (switchOffForDev) return;
-        
+
         let loggerDefaultParams = {};
 
         try {
@@ -199,15 +199,22 @@ export class HelperImpl implements Helper {
                 EX: Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
             });
 
-            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
-
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB, Constants.DB.SAVE_IN_REDIS);
+            logger.info({
+                labels,
+                ...loggerDefaultParams,
+                request: {
+                    key: key,
+                    value: value,
+                }
+            });
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
             logger.error({
                 labels,
                 ...loggerDefaultParams,
-                request: { 
+                request: {
                     key: key,
                     value: value,
                 },
@@ -362,4 +369,4 @@ export class HelperImpl implements Helper {
     }
 }
 
-export const helper = new HelperImpl();
+export const helper = new HelperImpl(); 
