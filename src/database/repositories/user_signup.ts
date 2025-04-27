@@ -42,7 +42,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             else {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = deSerialisedObject.isEmailVerified;

@@ -1,11 +1,11 @@
-import { privateKey } from "../config/config.js";
+import { jwtPublicKey, privateKey } from "../config/config.js";
 import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
-import { RedisEmailKeySerialisation } from "./interface.js";
+import { DecryptedAuthTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
@@ -21,13 +21,15 @@ interface Helper {
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
-    generateAuthToken(_id: string, username: string): string;
+    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
+    generateAuthToken(_id: string, username: string, email: string): string;
+    decryptAuthToken(token: string): DecryptedAuthTokenInterface;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
-    setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void>;
+    setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
     parseBooleanString(truthValue: string | null | undefined): boolean;
     isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
@@ -174,10 +176,16 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateAuthToken(_id: string, username: string): string {
+    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean {
+        if(queryCommand === Constants.DB_COMMANDS.UPDATE && rowCount) return true;
+        return false;
+    }
+
+    generateAuthToken(_id: string, username: string, email: string): string {
         const payload = {
             _id: _id,
             username: username,
+            email: email,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
@@ -186,6 +194,18 @@ export class HelperImpl implements Helper {
         });
 
         return token;
+    }
+
+    decryptAuthToken(token: string): DecryptedAuthTokenInterface {
+        try {
+            const payload = jwt.verify(token, jwtPublicKey, {
+                algorithms: Constants.JWT_CONFIG.ALGORITHM
+            });
+            return payload;
+        } 
+        catch (error) {
+            throw error;
+        }
     }
 
     convertToClassType<T>(response: unknown, classType: new (...args: any[]) => T): T {
@@ -242,7 +262,7 @@ export class HelperImpl implements Helper {
         return deSerialisedObject;
     }
 
-    async setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void> {
+    async setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS, Constants.TYPE_SWITCH.BOOLEAN);
         if (switchOffForDev) return;
 
@@ -250,7 +270,7 @@ export class HelperImpl implements Helper {
 
         try {
             await cacheDB.set(key, value, {
-                EX: Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
+                EX: timeout ?? Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
             });
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB, Constants.DB.SAVE_IN_REDIS);

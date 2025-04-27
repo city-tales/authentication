@@ -24,6 +24,7 @@ enum DB_TIMEOUTS {
     POSTGRESQL_DB_TIMEOUT = 10000,
     CACHE_DB_REDIS_TIMEOUT = 600,
     QUEUE_DB_REDIS_TIMEOUT = 10000,
+    LONG_CACHE_DB_REDIS_TIMEOUT = 86400,
 };
 
 enum DB_COMMANDS {
@@ -38,12 +39,13 @@ enum DB_COMMANDS {
 enum DB_ERRORS {
     DEFAULT_ERROR = 'DB OPERATION FAILED',
     INSERTION_FAILED = 'INSERTION FAILED',
-    UPDATED_FAILED = 'UPDATED FAILED',
+    UPDATE_FAILED = 'UPDATE FAILED',
     READ_FAILURE = 'UNABLE TO READ DATA',
 };
 
 enum SERIALISATION_KEYS {
     USER = 'USER',
+    VERIFICATION = 'VERIFICATION',
     DEVICE = 'DEVICE',
     EMAIL = 'EMAIL',
     COUNTRY_CODE = 'COUNTRY_CODE',
@@ -67,8 +69,9 @@ enum LOKI_LOGGER_LABELS {
     FAILED_JOB = 'jobFailed',
 
     REQUEST_TYPE = 'grpc',
-    SIGNUP_REQUEST = 'signup-request',
-    LOGIN_REQUEST = 'login-request',
+    SIGNUP_REQUEST = 'signupRequest',
+    LOGIN_REQUEST = 'loginRequest',
+    EMAIL_VERIFICATION = 'emailVerification',
     EMAIL = 'email',
     GOOGLE = 'google',
     PASSWORDLESS = 'passwordless',
@@ -79,9 +82,9 @@ enum LOKI_LOGGER_LABELS {
     MODELS = 'models',
     QUEUE = 'queue',
     WORKER = 'worker',
-    POSTGRESQL_DB = 'postgresql-db',
-    CACHE_DB = 'cache-db',
-    QUEUE_DB = 'queue-db'
+    POSTGRESQL_DB = 'postgresqlDB',
+    CACHE_DB = 'cacheDB',
+    QUEUE_DB = 'queueDB'
 };
 
 enum JWT_CONFIG { 
@@ -112,6 +115,8 @@ enum SIGNUP_MESSAGE {
     EXISTING_USER = 'Account already exists',
     FAILED = 'Account creation failed',
     NO_CONTENT = 'Account do not exists',
+    EMAIL_VERIFIED = 'Email successfully verified',
+    ALREADY_VERIFIED = 'Email alreay verified',
 };
 
 enum LOGIN_MESSAGE {
@@ -124,6 +129,8 @@ enum LOGIN_MESSAGE {
     WRONG_AUTHENTICATION = 'Wrong Password',
     SUCCESS = 'Logging In',
     FAILED = 'Server Error',
+    EMAIL_VERIFIED = 'Email successfully verified',
+    ALREADY_VERIFIED = 'Email alreay verified',
 };
 
 enum STATUS_CODES {

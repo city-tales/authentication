@@ -33,7 +33,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
                 response.name = deSerialisedObject.name;
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username);
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, email);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !deSerialisedObject.isEmailVerified;

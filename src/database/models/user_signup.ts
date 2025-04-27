@@ -4,7 +4,6 @@ import { Constants } from "../../utils/constants.js";
 import { UserSignUpInterface } from "../interface/user_signup.js";
 import { DeviceInterface } from "../interface/device_info.js";
 import { queueEmployee } from "../../utils/workers.js";
-import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "../../utils/queue.js";
 import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
 import { logger } from "../../config/loki.js";
 import { MultipleQueryObject } from "../../utils/custom_types.js";
@@ -30,12 +29,7 @@ class UserSignUpImpl implements UserSignUp {
             values.phone_number ?? null,
         ];
 
-        const response: SignUpResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.BAD_GATEWAY,
-            verified: false,
-        };
+        let response = new SignUpResponse();
         let loggerDefaultParams = {};
 
         try {
@@ -46,6 +40,7 @@ class UserSignUpImpl implements UserSignUp {
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
                 const data = queryResponse.rows[0];
+                if(!data.is_email_verified) response.token = helper.generateAuthToken(data._id, data.username, valuesArray['email']);
 
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = data.is_email_verified;
@@ -56,7 +51,7 @@ class UserSignUpImpl implements UserSignUp {
                     username: data.username,
                     isEmailVerified: data.is_email_verified,
                 };
-                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
@@ -107,12 +102,7 @@ class UserSignUpImpl implements UserSignUp {
             },
         ];
 
-        const response: SignUpResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.PROCESSING,
-            verified: false,
-        };
+        const response = new SignUpResponse();
         let loggerDefaultParams = {};
 
         try {
@@ -125,17 +115,17 @@ class UserSignUpImpl implements UserSignUp {
             };
 
             if (queryResponse.length) {
-                response.token = helper.generateAuthToken(userInfo._id, userInfo.username);
+                response.token = helper.generateAuthToken(userInfo._id, userInfo.username, userInfo.email);
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
-                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, {
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_DB, {
                     query: deviceDataQuery,
                     valuesArray: deviceValuesArray,
                     errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
                 });
 
-                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });

@@ -40,3 +40,14 @@ export class LoginResponse {
     }
 }
 
+export class EmailVerificationResponse {
+    public success: boolean;
+    public message: string;
+    public statusCode: number;
+
+    constructor(response?: EmailVerificationResponse) {
+        this.success = response?.success ?? helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE, Constants.TYPE_SWITCH.BOOLEAN);
+        this.message = response?.message ?? Constants.LOGIN_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+    }
+}

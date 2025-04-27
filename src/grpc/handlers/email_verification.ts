@@ -1,25 +1,25 @@
 import { logger } from "../../config/loki.js";
-import { userSignUpControllerImpl } from "../../controllers/email_signup.js";
-import { EmailSignUpLabelInterface } from "../../database/interface/logger.js";
-import { SignUpResponse } from "../../database/interface/response.js";
+import { userEmailVerificationControllerImpl } from "../../controllers/email_verification.js";
+import { EmailVerificationLabelInterface } from "../../database/interface/logger.js";
+import { EmailVerificationResponse } from "../../database/interface/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
-const emailSignUp = async (call, callback) => {
+const emailVerification = async (call, callback) => {
     const request = call.request;
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: EmailSignUpLabelInterface = {
-        operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
+    const labels: EmailVerificationLabelInterface = {
+        operation: Constants.LOKI_LOGGER_LABELS.EMAIL_VERIFICATION,
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
     };
 
-    let toRet: SignUpResponse;
+    let toRet: EmailVerificationResponse;
     let loggerDefaultParams = {};
 
     try {
-        const response: SignUpResponse = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
+        const response: EmailVerificationResponse = await userEmailVerificationControllerImpl.verifyEmail(request.token, context, labels);
         toRet = response;
 
         loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
@@ -46,5 +46,5 @@ const emailSignUp = async (call, callback) => {
 };
 
 export {
-    emailSignUp
+    emailVerification
 };

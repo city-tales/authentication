@@ -12,6 +12,11 @@ export interface EmailLoginLabelInterface {
     type: string,
 };
 
+export interface EmailVerificationLabelInterface {
+    operation: string,
+    type: string,
+};
+
 export interface AddJobToQueueLabelInterface {
     operation: string,
     subOperation: string,

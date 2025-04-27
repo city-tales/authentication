@@ -4,15 +4,25 @@ import { bullMQConnectionObject } from "../config/redis.js";
 import { AddJobToQueueLabelInterface, ContextInterface, RegisterWorkerLabelInterface } from "../database/interface/logger.js";
 import { Constants } from "./constants.js";
 import { helper } from "./helper.js";
+import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "./queue.js";
 
 interface QueueInterface {
-    addJobToQueue(context: ContextInterface, labels, queue, queueWorker: string, params: {}, maxAttempts?: number, lockDuration?: number): Promise<void>;
+    addJobToQueue(context: ContextInterface, labels, queueWorker: string, params: {}, maxAttempts?: number, lockDuration?: number): Promise<void>;
 }
+
+const queueMap = {
+    [Constants.DB.SAVE_IN_DB]: saveInDBQueueEmployee,
+    [Constants.DB.SAVE_IN_REDIS]: saveInRedisQueueEmployee,
+};
 
 class QueueImpl implements QueueInterface {
     private workers: Map<string, Worker> = new Map();
 
-    async addJobToQueue(context: ContextInterface, labels, queue, queueWorker: string, params: {}, maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
+    async addJobToQueue(context: ContextInterface, labels, queueWorker: string, params: {}, maxAttempts?: number, jobTimeout?: number, lockDuration?: number, backOffDelay?: number): Promise<void> {
+        const queue = queueMap[queueWorker];
+
+        if (!queue) throw new Error(`Queue ${queueWorker} not found.`);
+
         const queueJobConfig = {
             attempts: _.defaultTo(maxAttempts, Constants.QUEUE_DB.MAX_ATTEMPTS),
             backoff: {
@@ -89,7 +99,7 @@ class QueueImpl implements QueueInterface {
 
         this.registerWorker(Constants.DB.SAVE_IN_REDIS, async (job: Job) => {
             const { params, context, queueLabel } = job.data;
-            const { key, value } = params;
+            const { key, value, timeout } = params;
 
             const registerWorkerLabel: RegisterWorkerLabelInterface = {
                 operation: queueLabel.operation,
@@ -99,7 +109,7 @@ class QueueImpl implements QueueInterface {
             let loggerDefaultParams = {};
 
             try {
-                await helper.setRedis(context, registerWorkerLabel, key, helper.serialiseRedisKeyValues(value));
+                await helper.setRedis(context, registerWorkerLabel, key, helper.serialiseRedisKeyValues(value), timeout);
             }
             catch (error) {
                 loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_REDIS);

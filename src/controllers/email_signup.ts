@@ -42,6 +42,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
         try {
             const isExistingUser: SignUpResponse = await userSignUp.checkIfUserExists(userSchemaInfo, context, labels);
             if (isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
+                response.token = isExistingUser.token;
                 response.message = isExistingUser.message;
                 response.statusCode = isExistingUser.statusCode;
                 response.verified = isExistingUser.verified;
