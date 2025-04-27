@@ -2,22 +2,21 @@ import { uuidv4 } from "../config/imports.js";
 import { logger } from "../config/loki.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { ContextInterface, EmailSignUpLabelInterface } from "../database/interface/logger.js";
-import { SignUpSuccessResponse } from "../database/interface/response.js";
+import { SignUpResponse } from "../database/interface/response.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { userSignUp } from "../database/repositories/user_signup.js";
 import { Constants } from "../utils/constants.js";
-import { SignUpError } from "../utils/errors.js";
 import { helper } from "../utils/helper.js";
 
 interface UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpInterface): UserSignUpInterface;
-    createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
+    createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse>;
 }
 
 class UserSignUpControllerImpl implements UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpInterface): UserSignUpInterface {
         const sanitisedUserInfo: GPRCUserSignUpInterface = helper.convertToType<GPRCUserSignUpInterface>(
-            helper.sanitiseObject(userInfo),
+            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
@@ -33,31 +32,24 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
+    async createUser(userInfo: GPRCUserSignUpInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
         const userSchemaInfo: UserSignUpInterface = this.mapUserSchema(userInfo);
         const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
 
-        let response: SignUpSuccessResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.PROCESSING,
-        };
+        let response = new SignUpResponse();
         let loggerDefaultParams = {};
 
         try {
-            const isExistingUser = await userSignUp.checkIfUserExists(userSchemaInfo, context, labels);
+            const isExistingUser: SignUpResponse = await userSignUp.checkIfUserExists(userSchemaInfo, context, labels);
             if (isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
-                response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
-                response.statusCode = Constants.STATUS_CODES.OK;
+                response.token = isExistingUser.token;
+                response.message = isExistingUser.message;
+                response.statusCode = isExistingUser.statusCode;
+                response.verified = isExistingUser.verified;
             }
             else {
-                try {
-                    const userResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
-                    response = userResponse;
-                }
-                catch (error) {
-                    throw new SignUpError(error);
-                }
+                const userResponse: SignUpResponse = await userSignUp.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
+                response = userResponse;
             }
         }
         catch (error) {
@@ -72,7 +64,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
                 error: error,
             });
 
-            throw new SignUpError(error);
+            throw new SignUpResponse(error);
         }
 
         return response;

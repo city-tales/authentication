@@ -1,7 +1,7 @@
 enum DB {
     SAVE_IN_REDIS = 'saveInRedis',
     SAVE_IN_DB = 'saveInDB',
-    AUTHENTICATION_QUEUE_DB = 'authentication-queue-db',
+    SEND_EMAIL_FOR_VERIFICATION = 'sendEmailForVerification'
 };
 
 enum QUEUE_DB {
@@ -21,8 +21,10 @@ enum DB_TIMEOUTS {
     QUERY_TIMEOUT = 10000,
     LOCK_TIMEOUT = 10000,
     IDLE_TIMEOUT = 10000,
+    POSTGRESQL_DB_TIMEOUT = 10000,
     CACHE_DB_REDIS_TIMEOUT = 600,
     QUEUE_DB_REDIS_TIMEOUT = 10000,
+    LONG_CACHE_DB_REDIS_TIMEOUT = 86400,
 };
 
 enum DB_COMMANDS {
@@ -37,12 +39,13 @@ enum DB_COMMANDS {
 enum DB_ERRORS {
     DEFAULT_ERROR = 'DB OPERATION FAILED',
     INSERTION_FAILED = 'INSERTION FAILED',
-    UPDATED_FAILED = 'UPDATED FAILED',
+    UPDATE_FAILED = 'UPDATE FAILED',
     READ_FAILURE = 'UNABLE TO READ DATA',
 };
 
 enum SERIALISATION_KEYS {
     USER = 'USER',
+    VERIFICATION = 'VERIFICATION',
     DEVICE = 'DEVICE',
     EMAIL = 'EMAIL',
     COUNTRY_CODE = 'COUNTRY_CODE',
@@ -66,8 +69,9 @@ enum LOKI_LOGGER_LABELS {
     FAILED_JOB = 'jobFailed',
 
     REQUEST_TYPE = 'grpc',
-    SIGNUP_REQUEST = 'signup-request',
-    LOGIN_REQUEST = 'login-request',
+    SIGNUP_REQUEST = 'signupRequest',
+    LOGIN_REQUEST = 'loginRequest',
+    EMAIL_VERIFICATION = 'emailVerification',
     EMAIL = 'email',
     GOOGLE = 'google',
     PASSWORDLESS = 'passwordless',
@@ -78,8 +82,9 @@ enum LOKI_LOGGER_LABELS {
     MODELS = 'models',
     QUEUE = 'queue',
     WORKER = 'worker',
-    CACHE_DB = 'cache-db',
-    QUEUE_DB = 'queue-db'
+    POSTGRESQL_DB = 'postgresqlDB',
+    CACHE_DB = 'cacheDB',
+    QUEUE_DB = 'queueDB'
 };
 
 enum JWT_CONFIG { 
@@ -88,12 +93,13 @@ enum JWT_CONFIG {
 };
 
 enum DEV_CONTROLLER {
-    SWTICH_OFF_REDIS = 'true'
+    SWTICH_OFF_REDIS = 'false'
 };
 
-enum AUTH_TABLES {
+enum TABLES {
     USER_TABLE = 'users',
-    DEVICE_TABLE = 'device'
+    DEVICE_TABLE = 'device',
+    AUTH_TABLE = 'auth',
 };
 
 enum REDIS_MESSAGE {
@@ -102,15 +108,19 @@ enum REDIS_MESSAGE {
 };
 
 enum SIGNUP_MESSAGE {
+    EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     CREATED = 'Account has been created successfully',
     EXISTING_USER = 'Account already exists',
     FAILED = 'Account creation failed',
     NO_CONTENT = 'Account do not exists',
+    EMAIL_VERIFIED = 'Email successfully verified',
+    ALREADY_VERIFIED = 'Email alreay verified',
 };
 
 enum LOGIN_MESSAGE {
+    EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     NOT_VERIFIED = 'Please verify email',
@@ -119,6 +129,8 @@ enum LOGIN_MESSAGE {
     WRONG_AUTHENTICATION = 'Wrong Password',
     SUCCESS = 'Logging In',
     FAILED = 'Server Error',
+    EMAIL_VERIFIED = 'Email successfully verified',
+    ALREADY_VERIFIED = 'Email alreay verified',
 };
 
 enum STATUS_CODES {
@@ -195,6 +207,15 @@ enum BOOLEAN_VALUES {
     FALSE = 'FALSE',
 };
 
+enum TYPE_SWITCH {
+    BOOLEAN = 'boolean',
+    NATIVE_OBJECT = 'object',
+    OBJECT = 'Object',
+    STRING = 'string',
+    NUMBER = 'number',
+    INTERFACE = 'interface',
+};
+
 export class Constants {
     static readonly PORT = process.env.port;
     static readonly DB_PORT = '5432';
@@ -215,7 +236,7 @@ export class Constants {
 
     static readonly DEV_CONTROLLER = DEV_CONTROLLER;
 
-    static readonly AUTH_TABLES = AUTH_TABLES;
+    static readonly TABLES = TABLES;
     
     static readonly REDIS_MESSAGE = REDIS_MESSAGE;
     
@@ -223,5 +244,7 @@ export class Constants {
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
     
     static readonly STATUS_CODES = STATUS_CODES;
+
     static readonly BOOLEAN_VALUES = BOOLEAN_VALUES;
+    static readonly TYPE_SWITCH = TYPE_SWITCH;
 };

@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS DEVICE(
     device_name VARCHAR(256),
     login_time Date NOT NULL,
     user_id VARCHAR(256),
-    FOREIGN KEY(user_id) REFERENCES users(_id)
+    FOREIGN KEY(user_id) REFERENCES USERS(_id)
 );

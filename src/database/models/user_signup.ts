@@ -1,26 +1,27 @@
-import { SignUpSuccessResponse } from "../interface/response.js";
+import { SignUpResponse } from "../interface/response.js";
 import { helper } from "../../utils/helper.js";
 import { Constants } from "../../utils/constants.js";
-import { SignUpError } from "../../utils/errors.js";
 import { UserSignUpInterface } from "../interface/user_signup.js";
 import { DeviceInterface } from "../interface/device_info.js";
 import { queueEmployee } from "../../utils/workers.js";
-import { saveInDBQueueEmployee, saveInRedisQueueEmployee } from "../../utils/queue.js";
 import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
 import { logger } from "../../config/loki.js";
+import { MultipleQueryObject } from "../../utils/custom_types.js";
 
 interface UserSignUp {
-    checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
-    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse>;
+    checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse>;
+    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse>;
 }
 
 class UserSignUpImpl implements UserSignUp {
-    async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
-        const tableName = Constants.AUTH_TABLES.USER_TABLE;
-        const query = `SELECT _id, username FROM ${tableName} WHERE 
-            (email = $1 OR $1 IS NULL) AND
-            (primary_country_code = $2 OR $2 IS NULL) AND
-            (phone_number = $3 OR $3 IS NULL) LIMIT 1`;
+    async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
+        const userTableName = Constants.TABLES.USER_TABLE;
+        const authTableName = Constants.TABLES.AUTH_TABLE;
+        const query = `SELECT users._id, users.name, users.username, auth.is_email_verified FROM ${userTableName}
+                        JOIN ${authTableName} ON users._id = auth.user_id WHERE
+                        (users.email = $1 OR $1 IS NULL) AND
+                        (users.primary_country_code = $2 OR $2 IS NULL) AND
+                        (users.phone_number = $3 OR $3 IS NULL) LIMIT 1`;
 
         const valuesArray = [
             values.email ?? null,
@@ -28,11 +29,7 @@ class UserSignUpImpl implements UserSignUp {
             values.phone_number ?? null,
         ];
 
-        const response: SignUpSuccessResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.SERVICE_UNAVAILABLE,
-        };
+        let response = new SignUpResponse();
         let loggerDefaultParams = {};
 
         try {
@@ -42,14 +39,19 @@ class UserSignUpImpl implements UserSignUp {
                 if (!queryResponse.rowCount) response.message = Constants.SIGNUP_MESSAGE.NO_CONTENT;
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
-                response.statusCode = Constants.STATUS_CODES.OK;      
-                
                 const data = queryResponse.rows[0];
+                if(!data.is_email_verified) response.token = helper.generateAuthToken(data._id, data.username, valuesArray['email']);
+
+                response.statusCode = Constants.STATUS_CODES.OK;
+                response.verified = data.is_email_verified;
+
                 const redisEmailValue: Object = {
                     _id: data._id,
-                    username: data.username
+                    name: data.name,
+                    username: data.username,
+                    isEmailVerified: data.is_email_verified,
                 };
-                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
@@ -57,28 +59,28 @@ class UserSignUpImpl implements UserSignUp {
         }
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.READ_FAILURE;
-            response.statusCode = Constants.STATUS_CODES.BAD_GATEWAY;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logger.error({
                 labels,
                 ...loggerDefaultParams,
-                request: { 
+                request: {
                     query: query,
                     valuesArray: valuesArray,
                 },
                 error,
             });
 
-            throw new SignUpError(helper.convertToClassType(response, SignUpError));
+            throw new SignUpResponse(response);
         }
 
         return response;
     }
 
-    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpSuccessResponse> {
-        const usersTableName = Constants.AUTH_TABLES.USER_TABLE;
-        const deviceTableName = Constants.AUTH_TABLES.DEVICE_TABLE;
+    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
+        const usersTableName = Constants.TABLES.USER_TABLE;
+        const deviceTableName = Constants.TABLES.DEVICE_TABLE;
+        const authTableName = Constants.TABLES.AUTH_TABLE;
 
         const usersDataQuery = `INSERT INTO ${usersTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const usersValuesArray = Object.values(userInfo);
@@ -86,52 +88,61 @@ class UserSignUpImpl implements UserSignUp {
         const deviceDataQuery = `INSERT INTO ${deviceTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const deviceValuesArray = Object.values(deviceInfo);
 
-        const response: SignUpSuccessResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.PROCESSING,
-        };
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id));
+
+        const usersAuthDataQuery: MultipleQueryObject = [
+            {
+                query: usersDataQuery,
+                valuesArray: usersValuesArray
+            },
+            {
+                query: authDataQuery,
+                valuesArray: authValuesArray
+            },
+        ];
+
+        const response = new SignUpResponse();
         let loggerDefaultParams = {};
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, usersDataQuery, usersValuesArray, Constants.DB_ERRORS.INSERTION_FAILED, labels);
+            const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
             const redisEmailValue: Object = {
                 _id: userInfo._id,
-                username: userInfo.username
+                name: userInfo.name,
+                username: userInfo.username,
+                isEmailVerified: false,
             };
 
-            if (helper.isInsertQuerySuccessful(queryResponse.command, queryResponse.rowCount)) {
-                await queueEmployee.addJobToQueue(context, labels, saveInDBQueueEmployee, Constants.DB.SAVE_IN_DB, {
+            if (queryResponse.length) {
+                response.token = helper.generateAuthToken(userInfo._id, userInfo.username, userInfo.email);
+                response.message = Constants.SIGNUP_MESSAGE.CREATED;
+                response.statusCode = Constants.STATUS_CODES.CREATED;
+
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_DB, {
                     query: deviceDataQuery,
                     valuesArray: deviceValuesArray,
                     errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
                 });
-                await queueEmployee.addJobToQueue(context, labels, saveInRedisQueueEmployee, Constants.DB.SAVE_IN_REDIS, {
+
+                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
-
-                response.token = helper.generateAuthToken(userInfo._id, userInfo.username);
-                response.message = Constants.SIGNUP_MESSAGE.CREATED;
-                response.statusCode = Constants.STATUS_CODES.CREATED;
             }
         }
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
-            response.statusCode = Constants.STATUS_CODES.METHOD_NOT_ALLOWED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logger.error({
                 labels,
                 ...loggerDefaultParams,
-                request: { 
-                    query: usersDataQuery,
-                    valuesArray: usersValuesArray,
-                },
+                ...usersAuthDataQuery,
                 error,
             });
 
-            throw new SignUpError(helper.convertToClassType({ ...response }, SignUpError));
+            throw new SignUpResponse(response);
         }
 
         return response;

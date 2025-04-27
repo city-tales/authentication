@@ -1,31 +1,35 @@
-import { privateKey } from "../config/config.js";
+import { jwtPublicKey, privateKey } from "../config/config.js";
 import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
-import { RedisError } from "./errors.js";
-import { RedisEmailKeySerialisation } from "./interface.js";
+import { DecryptedAuthTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
+import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
+import { RedisResponse } from "../database/interface/response.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
+    createAuthSchema(userId: string): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
-    executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number);
+    executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
-    generateAuthToken(_id: string, username: string): string;
+    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
+    generateAuthToken(_id: string, username: string, email: string): string;
+    decryptAuthToken(token: string): DecryptedAuthTokenInterface;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
-    convertToType<T>(unknownValue: unknown): T;
+    convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
-    setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void>;
+    setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
     parseBooleanString(truthValue: string | null | undefined): boolean;
     isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
@@ -61,6 +65,18 @@ export class HelperImpl implements Helper {
         return value;
     }
 
+    createAuthSchema(userId: string): AuthVerificationInterface {
+        return {
+            _id: uuidv4(),
+            is_email_verified: false,
+            is_google_verified: false,
+            is_apple_verified: false,
+            is_passwordless: false,
+            is_mfa_enabled: false,
+            user_id: userId,
+        };
+    }
+
     async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         let loggerDefaultParams = {};
@@ -87,8 +103,9 @@ export class HelperImpl implements Helper {
         }
         catch (error) {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
+
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.info({
+            logger.error({
                 labels,
                 ...loggerDefaultParams,
                 error,
@@ -101,9 +118,10 @@ export class HelperImpl implements Helper {
         }
     }
 
-    async executeMultipleQueryAsyncWithoutLock(queries: MultipleQueryObject[], errorMessage?: string, queryTimeout?: number) {
+    async executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         const response: string[] = [];
+        let loggerDefaultParams = {};
         try {
             await dB.query(Constants.DB_COMMANDS.BEGIN);
 
@@ -121,14 +139,27 @@ export class HelperImpl implements Helper {
             }
 
             await dB.query(Constants.DB_COMMANDS.COMMIT);
+
+            loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
+            logger.info({
+                labels,
+                ...loggerDefaultParams,
+                queries,
+            });
+
             return response;
         }
         catch (error) {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(error.message))
-                throw new Error(error.message);
 
-            throw new Error(Constants.DB_ERRORS.DEFAULT_ERROR);
+            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
+            logger.error({
+                labels,
+                ...loggerDefaultParams,
+                error,
+            });
+
+            throw new Error(error.message);
         }
         finally {
             dB.release();
@@ -145,10 +176,16 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateAuthToken(_id: string, username: string): string {
+    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean {
+        if(queryCommand === Constants.DB_COMMANDS.UPDATE && rowCount) return true;
+        return false;
+    }
+
+    generateAuthToken(_id: string, username: string, email: string): string {
         const payload = {
             _id: _id,
             username: username,
+            email: email,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
@@ -159,13 +196,44 @@ export class HelperImpl implements Helper {
         return token;
     }
 
+    decryptAuthToken(token: string): DecryptedAuthTokenInterface {
+        try {
+            const payload = jwt.verify(token, jwtPublicKey, {
+                algorithms: Constants.JWT_CONFIG.ALGORITHM
+            });
+            return payload;
+        } 
+        catch (error) {
+            throw error;
+        }
+    }
+
     convertToClassType<T>(response: unknown, classType: new (...args: any[]) => T): T {
         return response as T;
     }
 
-    convertToType<T>(response: unknown): T {
+    convertToType<T>(response: any, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T {
+        if (type === 'boolean') {
+            return (response === 'true' || response === true) as unknown as T;
+        }
+        if (type === 'number') {
+            return Number(response) as unknown as T;
+        }
+        if (type === 'string') {
+            return String(response) as unknown as T;
+        }
+        if (type === 'object' || type === 'Object') {
+            if (typeof response === 'string') {
+                return JSON.parse(response) as T;
+            }
+            return response as T;
+        }
+        if (type === 'interface') {
+            return response as T;
+        }
         return response as T;
     }
+    
 
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
         return {
@@ -182,21 +250,27 @@ export class HelperImpl implements Helper {
     }
 
     parseRedisValueToObject(value: string) {
-        const serialisedString = value.replace(/'/g, '"');
+        let serialisedString = value
+            .replace(/'/g, '"')
+            .replace(/([{,]\s*)("?)([a-zA-Z0-9_]+)\2(?=\s*:)/g, '$1"$3"');
+
+        if (serialisedString.startsWith('"') && serialisedString.endsWith('"')) {
+            serialisedString = serialisedString.slice(1, -1);
+        }
         const deSerialisedObject = JSON.parse(serialisedString);
 
         return deSerialisedObject;
     }
 
-    async setRedis(context: ContextInterface, labels, key: string, value: string): Promise<void> {
-        const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS);
+    async setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void> {
+        const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS, Constants.TYPE_SWITCH.BOOLEAN);
         if (switchOffForDev) return;
 
         let loggerDefaultParams = {};
 
         try {
             await cacheDB.set(key, value, {
-                EX: Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
+                EX: timeout ?? Constants.DB_TIMEOUTS.CACHE_DB_REDIS_TIMEOUT
             });
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB, Constants.DB.SAVE_IN_REDIS);
@@ -221,13 +295,13 @@ export class HelperImpl implements Helper {
                 error,
             });
 
-            throw new RedisError(error.message);
+            throw new RedisResponse(error);
         }
     }
 
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: string): DeviceInterface {
         const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
-            helper.sanitiseObject(deviceInfo),
+            helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
@@ -269,11 +343,11 @@ export class HelperImpl implements Helper {
     }
 
     passStringNullParams(value: string | null | undefined): string | null {
-        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value);
+        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING);
     }
 
     passNumberNullParams(value: number | null | undefined): number | null {
-        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<number>(value);
+        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
     generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string {
@@ -302,7 +376,7 @@ export class HelperImpl implements Helper {
         if (this.isNeitherNullNorUndefinedNorEmpty(userInfo.phoneNumber)) {
             phonePrefix = userInfo.phoneNumber!.split('-')[1];
             baseUsername += (this.isNeitherNullNorUndefinedNorEmpty(
-                helper.convertToType<string>(phonePrefix)) ? `${phonePrefix}-` : `${faker.number.int(
+                helper.convertToType<string>(phonePrefix, Constants.TYPE_SWITCH.STRING)) ? `${phonePrefix}-` : `${faker.number.int(
                     { min: 100, max: 999 })
                 }-`)
         }
@@ -318,11 +392,11 @@ export class HelperImpl implements Helper {
     }
 
     sanitiseStringValue(value: string | null | undefined): string | null {
-        return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value) : null;
+        return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING) : null;
     }
 
     sanitiseNumericValue(value: number | null | undefined): number | null {
-        return this.isNeitherNullNorUndefined(value) ? this.convertToType<number>(value) : null;
+        return this.isNeitherNullNorUndefined(value) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
     }
 
     sanitiseObject(object: Object): Object {
