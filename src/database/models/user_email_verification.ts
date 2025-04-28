@@ -15,6 +15,9 @@ class UserEmailVerificationImpl implements UserEmailVerification {
     async verifyEmail(decryptedAuthToken: DecryptedAuthTokenInterface, context: ContextInterface, labels: EmailVerificationLabelInterface): Promise<EmailVerificationResponse> {
         let response = new EmailVerificationResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+        };
 
         const authTableName = Constants.TABLES.AUTH_TABLE;
         const query = `UPDATE ${authTableName} SET is_email_verified = true WHERE user_id = $1`;
@@ -45,9 +48,9 @@ class UserEmailVerificationImpl implements UserEmailVerification {
                 };
 
                 const isKeyInRedis = await cacheDB.get(existingRedisKey);
-                if(helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                     const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
-                    
+
                     const updatedRedisEmailValue: Object = {
                         _id: deSerialisedObject._id,
                         name: deSerialisedObject.name,
@@ -75,12 +78,10 @@ class UserEmailVerificationImpl implements UserEmailVerification {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels,
-                ...loggerDefaultParams,
-                decryptedAuthToken,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...decryptedAuthToken };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(response);
         }

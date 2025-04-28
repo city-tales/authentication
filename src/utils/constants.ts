@@ -116,7 +116,7 @@ enum SIGNUP_MESSAGE {
     FAILED = 'Account creation failed',
     NO_CONTENT = 'Account do not exists',
     EMAIL_VERIFIED = 'Email successfully verified',
-    ALREADY_VERIFIED = 'Email alreay verified',
+    ALREADY_VERIFIED = 'Email already verified',
 };
 
 enum LOGIN_MESSAGE {
@@ -130,7 +130,7 @@ enum LOGIN_MESSAGE {
     SUCCESS = 'Logging In',
     FAILED = 'Server Error',
     EMAIL_VERIFIED = 'Email successfully verified',
-    ALREADY_VERIFIED = 'Email alreay verified',
+    ALREADY_VERIFIED = 'Email already verified',
 };
 
 enum STATUS_CODES {
@@ -203,8 +203,8 @@ enum STATUS_CODES {
 };
 
 enum BOOLEAN_VALUES {
-    TRUE = 'TRUE',
-    FALSE = 'FALSE',
+    TRUE = 'true',
+    FALSE = 'false',
 };
 
 enum TYPE_SWITCH {

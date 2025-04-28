@@ -46,6 +46,8 @@ interface Helper {
     generateContext();
     generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
     generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
+    logErrorStack(logPayload: any, error: any);
+    logResponse(logPayload: any, response);
 };
 
 export class HelperImpl implements Helper {
@@ -80,6 +82,9 @@ export class HelperImpl implements Helper {
     async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+        };
 
         try {
             await dB.query(Constants.DB_COMMANDS.BEGIN)
@@ -93,11 +98,10 @@ export class HelperImpl implements Helper {
             await dB.query(Constants.DB_COMMANDS.COMMIT);
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.info({
-                labels,
-                ...loggerDefaultParams,
-                queryConfig,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...queryConfig };
+            logPayload = helper.logResponse(logPayload, response);
+            logger.info({ ...logPayload });
 
             return response;
         }
@@ -105,11 +109,9 @@ export class HelperImpl implements Helper {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
 
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new Error(error.message);
         }
@@ -122,6 +124,10 @@ export class HelperImpl implements Helper {
         const dB = await pool.connect();
         const response: string[] = [];
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+        };
+
         try {
             await dB.query(Constants.DB_COMMANDS.BEGIN);
 
@@ -141,11 +147,10 @@ export class HelperImpl implements Helper {
             await dB.query(Constants.DB_COMMANDS.COMMIT);
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.info({
-                labels,
-                ...loggerDefaultParams,
-                queries,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...queries };
+            logPayload = helper.logResponse(logPayload, response);
+            logger.info({ ...logPayload });
 
             return response;
         }
@@ -153,11 +158,9 @@ export class HelperImpl implements Helper {
             await dB.query(Constants.DB_COMMANDS.ROLLBACK);
 
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new Error(error.message);
         }
@@ -177,7 +180,7 @@ export class HelperImpl implements Helper {
     }
 
     isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean {
-        if(queryCommand === Constants.DB_COMMANDS.UPDATE && rowCount) return true;
+        if (queryCommand === Constants.DB_COMMANDS.UPDATE && rowCount) return true;
         return false;
     }
 
@@ -202,7 +205,7 @@ export class HelperImpl implements Helper {
                 algorithms: Constants.JWT_CONFIG.ALGORITHM
             });
             return payload;
-        } 
+        }
         catch (error) {
             throw error;
         }
@@ -226,14 +229,9 @@ export class HelperImpl implements Helper {
             if (typeof response === 'string') {
                 return JSON.parse(response) as T;
             }
-            return response as T;
-        }
-        if (type === 'interface') {
-            return response as T;
         }
         return response as T;
     }
-    
 
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
         return {
@@ -267,6 +265,13 @@ export class HelperImpl implements Helper {
         if (switchOffForDev) return;
 
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                key: key,
+                value: value,
+            },
+        };
 
         try {
             await cacheDB.set(key, value, {
@@ -274,26 +279,14 @@ export class HelperImpl implements Helper {
             });
 
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB, Constants.DB.SAVE_IN_REDIS);
-            logger.info({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    key: key,
-                    value: value,
-                }
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logger.info({ ...logPayload });
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    key: key,
-                    value: value,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new RedisResponse(error);
         }
@@ -440,6 +433,31 @@ export class HelperImpl implements Helper {
             ...(this.isNeitherNullNorUndefinedNorEmpty(codeIdentifier) && { codeIdentifier }),
             ...(this.isNeitherNullNorUndefinedNorEmpty(source) && { source })
         };
+    }
+
+    logErrorStack(logPayload: any, error: any, customMessage?: string) {
+        const cloneLogPayload = {
+            ...logPayload,
+            error: { ...(logPayload.error || {}) }
+        };
+
+        ['message', 'details', 'code', 'statusCode', 'stack', 'name', 'token', 'retryVerification', 'success', 'verified'].forEach((key) => {
+            if (this.isNeitherNullNorUndefinedNorEmpty(error[key])) {
+                cloneLogPayload.error[key] = error[key];
+            }
+        });
+        if (this.isNeitherNullNorUndefinedNorEmpty(customMessage)) cloneLogPayload.error['message'] = customMessage;
+
+        return cloneLogPayload;
+    }
+
+    logResponse(logPayload: any, response: any) {
+        const cloneLogPayload = {
+            ...logPayload,
+            response: { ...(logPayload.response || {}), ...response },
+        };
+
+        return cloneLogPayload;
     }
 }
 

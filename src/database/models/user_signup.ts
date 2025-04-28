@@ -31,6 +31,13 @@ class UserSignUpImpl implements UserSignUp {
 
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                query: query,
+                valuesArray: valuesArray,
+            },
+        };
 
         try {
             const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
@@ -40,7 +47,7 @@ class UserSignUpImpl implements UserSignUp {
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
                 const data = queryResponse.rows[0];
-                if(!data.is_email_verified) response.token = helper.generateAuthToken(data._id, data.username, valuesArray['email']);
+                if (!data.is_email_verified) response.token = helper.generateAuthToken(data._id, data.username, valuesArray['email']);
 
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = data.is_email_verified;
@@ -56,20 +63,18 @@ class UserSignUpImpl implements UserSignUp {
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
                 });
             }
+            else {
+                response.message = Constants.SIGNUP_MESSAGE.NO_CONTENT;
+                response.statusCode = Constants.STATUS_CODES.OK;
+            }
         }
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.READ_FAILURE;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    query: query,
-                    valuesArray: valuesArray,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new SignUpResponse(response);
         }
@@ -104,6 +109,10 @@ class UserSignUpImpl implements UserSignUp {
 
         const response = new SignUpResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            ...usersAuthDataQuery,
+        };
 
         try {
             const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
@@ -135,12 +144,9 @@ class UserSignUpImpl implements UserSignUp {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                ...usersAuthDataQuery,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new SignUpResponse(response);
         }

@@ -17,15 +17,21 @@ interface UserLoginRepository {
 class UserLoginRepositoryImpl implements UserLoginRepository {
     async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
         let response = new LoginResponse();
-        let loggerDefaultParams = {};
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: email,
         };
-
         const redisKey: string = helper.serialiseRedisKeyValues(
             helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
         );
+
+        let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                redisKey: redisKey,
+            },
+        };
 
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
@@ -39,14 +45,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 response.retryVerification = !deSerialisedObject.isEmailVerified;
 
                 loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-                logger.info({
-                    labels,
-                    ...loggerDefaultParams,
-                    request: {
-                        redisKey: redisKey,
-                    },
-                    response,
-                });
+                logPayload = { ...logPayload, ...loggerDefaultParams };
+                logPayload = helper.logResponse(logPayload, response);
+                logger.info({ ...logPayload });
             }
             else {
                 response.message = Constants.REDIS_MESSAGE.NO_CONTENT;
@@ -57,14 +58,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.REDIS_MESSAGE.FAILED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    redisKey: redisKey,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new LoginResponse(response);
         }
@@ -75,6 +71,13 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
     async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
         let response = new LoginResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                userInfo,
+                deviceInfo,
+            },
+        };
 
         try {
             const userResponse: LoginResponse = await userLoginImpl.loginUser(userInfo, deviceInfo, context, labels);
@@ -82,15 +85,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userInfo,
-                    deviceInfo, 
-                },
-                error: error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new LoginResponse(error);
         }
