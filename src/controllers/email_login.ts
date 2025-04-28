@@ -30,6 +30,13 @@ class UserLoginControllerImpl implements UserLoginController {
 
         let response = new LoginResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                userLoginSchemaInfo,
+                deviceLoginSchemaInfo,
+            },
+        };
 
         try {
             const isKeyInRedis: LoginResponse = await userLoginRepositoryImpl.checkUserInRedis(userInfo.email, context, labels);
@@ -43,15 +50,9 @@ class UserLoginControllerImpl implements UserLoginController {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userLoginSchemaInfo,
-                    deviceLoginSchemaInfo, 
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new LoginResponse(error);
         }

@@ -17,31 +17,31 @@ const emailLogin = async (call, callback) => {
     
     let toRet;
     let loggerDefaultParams = {};
+    let logPayload = {
+        labels,
+        request,
+    };
 
     try {
         const response: LoginResponse = await userLoginControllerImpl.loginUser(request.userEmailLoginRequest, request.userDeviceInformation, context, labels);
         toRet = response;
-
+        
         loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
-        logger.info({
-            labels,
-            ...loggerDefaultParams,
-            request,
-            toRet,
-        });
+        logPayload = { ...logPayload, ...loggerDefaultParams };
+        logPayload = helper.logResponse(logPayload, response);
+        logger.info({ ...logPayload });
     }
     catch (error) {
         toRet = error;
 
         loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
-        logger.error({
-            labels,
-            ...loggerDefaultParams,
-            request,
-            toRet,
-        });
-    }
+        logPayload = { ...logPayload, ...loggerDefaultParams };
+        logPayload = helper.logErrorStack(logPayload, error);
+        logger.error({ ...logPayload });
 
+        callback(error, null);
+    }
+    
     callback(null, toRet);
 };
 

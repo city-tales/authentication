@@ -24,6 +24,13 @@ class UserLoginImpl implements UserLogin {
 
         const valuesArray = Object.values(userInfo);
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                userInfo,
+                deviceInfo,
+            },
+        };
 
         try {
             const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
@@ -57,7 +64,7 @@ class UserLoginImpl implements UserLogin {
                     valuesArray: deviceValuesArray,
                     errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
                 });
-                
+
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)
@@ -79,15 +86,9 @@ class UserLoginImpl implements UserLogin {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
-            logger.error(Constants.LOKI_LOGGER_LABELS.REQUEST_TYPE, {
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userInfo,
-                    deviceInfo,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new LoginResponse(response);
         }

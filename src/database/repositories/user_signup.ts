@@ -18,6 +18,9 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
     async checkIfUserExists(userInfo: UserSignUpInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+        };
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
@@ -35,7 +38,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                     primary_country_code: helper.passStringNullParams(userInfo.primary_country_code),
                     phone_number: helper.passStringNullParams(userInfo.phone_number),
                 };
-                
+
                 const userResponse: SignUpResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context, labels);
                 response = userResponse;
             }
@@ -48,26 +51,18 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
                 response.verified = deSerialisedObject.isEmailVerified;
 
                 loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-                logger.info({
-                    labels,
-                    ...loggerDefaultParams,
-                    request: {
-                        redisKey: redisKey
-                    },
-                    response,
-                });
+                logPayload = { ...logPayload, ...loggerDefaultParams };
+                logPayload = { ...logPayload, ...{ redisKey: redisKey } };
+                logPayload = helper.logResponse(logPayload, response);
+                logger.info({ ...logPayload });
             }
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userInfo: userInfo,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...{ userInfo: userInfo } };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new SignUpResponse(error);
         }
@@ -83,6 +78,13 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             verified: false,
         };
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                userInfo,
+                deviceInfo,
+            },
+        };
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
@@ -98,15 +100,9 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userInfo,
-                    deviceInfo,
-                },
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new SignUpResponse(error);
         }

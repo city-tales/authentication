@@ -38,6 +38,13 @@ class UserSignUpControllerImpl implements UserSignUpController {
 
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            request: {
+                userSchemaInfo,
+                deviceSchemaInfo,
+            },
+        };
 
         try {
             const isExistingUser: SignUpResponse = await userSignUp.checkIfUserExists(userSchemaInfo, context, labels);
@@ -54,15 +61,9 @@ class UserSignUpControllerImpl implements UserSignUpController {
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                request: {
-                    userSchemaInfo,
-                    deviceSchemaInfo,
-                },
-                error: error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new SignUpResponse(error);
         }

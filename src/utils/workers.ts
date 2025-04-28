@@ -32,14 +32,20 @@ class QueueImpl implements QueueInterface {
             timeout: _.defaultTo(jobTimeout, Constants.QUEUE_DB.JOB_TIMEOUT),
             lockDuration: _.defaultTo(lockDuration, Constants.QUEUE_DB.LOCK_DURATION),
         };
-        
+
         const queueLabel: AddJobToQueueLabelInterface = {
             operation: labels.operation,
             subOperation: Constants.LOKI_LOGGER_LABELS.ADD_JOB_TO_QUEUE,
             type: labels.type,
         };
         let loggerDefaultParams = {};
-        
+        let logPayload = {
+            labels,
+            params,
+            queueLabel,
+            queueJobConfig,
+        };
+
         try {
             await queue.add(queueWorker, {
                 params,
@@ -48,25 +54,18 @@ class QueueImpl implements QueueInterface {
             }, queueJobConfig);
 
             loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
-            logger.info({
-                queueLabel,
-                ...loggerDefaultParams,
-                params,
-                queueJobConfig,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
-            logger.error({
-                queueLabel,
-                ...loggerDefaultParams,
-                params,
-                queueJobConfig,
-                error,
-            });
-
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
+            
             throw new Error(error);
         }
+
+        logger.info({ ...logPayload });
     }
 
     startWorkers() {
@@ -80,18 +79,19 @@ class QueueImpl implements QueueInterface {
                 type: queueLabel.type
             };
             let loggerDefaultParams = {};
+            let logPayload = {
+                registerWorkerLabel,
+                params,
+            };
 
             try {
                 await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
             }
             catch (error) {
                 loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
-                logger.error({
-                    registerWorkerLabel,
-                    ...loggerDefaultParams,
-                    params,
-                    error,
-                });
+                logPayload = { ...logPayload, ...loggerDefaultParams };
+                logPayload = helper.logErrorStack(logPayload, error);
+                logger.error({ ...logPayload });
 
                 throw new Error(error);
             }
@@ -107,18 +107,19 @@ class QueueImpl implements QueueInterface {
                 type: queueLabel.type
             };
             let loggerDefaultParams = {};
+            let logPayload = {
+                registerWorkerLabel,
+                params,
+            };
 
             try {
                 await helper.setRedis(context, registerWorkerLabel, key, helper.serialiseRedisKeyValues(value), timeout);
             }
             catch (error) {
                 loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_REDIS);
-                logger.error({
-                    registerWorkerLabel,
-                    ...loggerDefaultParams,
-                    params,
-                    error,
-                });
+                logPayload = { ...logPayload, ...loggerDefaultParams };
+                logPayload = helper.logErrorStack(logPayload, error);
+                logger.error({ ...logPayload });
 
                 throw new Error(error);
             }
@@ -134,17 +135,18 @@ class QueueImpl implements QueueInterface {
 
         this.workers.set(queueName, worker);
         let loggerDefaultParams = {};
-        
+        let logPayload = {
+            queueName,
+        };
+
         worker.on('completed', job => {
             const { context, queueLabel } = job?.data || {};
 
             loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.PERFORM_JOB);
-            logger.info({
-                queueLabel,
-                ...loggerDefaultParams,
-                ...job,
-                queueName,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...queueLabel };
+            logPayload = { ...logPayload, ...job };
+            logger.info({ ...logPayload });
         });
 
         worker.on('failed', (job, error) => {
@@ -152,13 +154,11 @@ class QueueImpl implements QueueInterface {
             const { context, queueLabel } = job?.data || {};
 
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.FAILED_JOB);
-            logger.error({
-                queueLabel,
-                ...loggerDefaultParams,
-                ...job,
-                queueName,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...queueLabel };
+            logPayload = { ...logPayload, ...job };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
         });
     }
 }

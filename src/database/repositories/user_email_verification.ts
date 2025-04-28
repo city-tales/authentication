@@ -15,6 +15,9 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
     async verifyEmail(decryptedAuthToken: DecryptedAuthTokenInterface, context: ContextInterface, labels: EmailVerificationLabelInterface): Promise<EmailVerificationResponse> {
         let response = new EmailVerificationResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+        };
 
         const userInfoFromData: RedisEmailKeySerialisation = {
             email: helper.sanitiseStringValue(decryptedAuthToken.email)
@@ -26,24 +29,20 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
 
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
-            if(helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
                 const isEmailVerified: boolean = helper.convertToType<boolean>(deSerialisedObject.isEmailVerified, Constants.TYPE_SWITCH.BOOLEAN);
 
-                if(isEmailVerified) {
+                if (isEmailVerified) {
                     response.success = true;
                     response.message = Constants.LOGIN_MESSAGE.ALREADY_VERIFIED;
                     response.statusCode = Constants.STATUS_CODES.OK;
 
                     loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-                    logger.info({
-                        labels,
-                        ...loggerDefaultParams,
-                        request: {
-                            redisKey: redisKey,
-                        },
-                        response,
-                    });
+                    logPayload = { ...logPayload, ...loggerDefaultParams };
+                    logPayload = { ...logPayload, ...{ redisKey: redisKey } };
+                    logPayload = helper.logResponse(logPayload, response);
+                    logger.info({ ...logPayload });
 
                     return response;
                 }
@@ -54,12 +53,10 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                decryptedAuthToken,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = { ...logPayload, ...decryptedAuthToken };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);
         }

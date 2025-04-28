@@ -14,6 +14,10 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
     async verifyEmail(token: string, context: ContextInterface, labels: EmailVerificationLabelInterface): Promise<EmailVerificationResponse> {
         let response = new EmailVerificationResponse();
         let loggerDefaultParams = {};
+        let logPayload = {
+            labels,
+            token: token,
+        };
 
         try {
             const decryptedAuthToken: DecryptedAuthTokenInterface = helper.decryptAuthToken(token);
@@ -23,12 +27,9 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
         }
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
-            logger.error({
-                labels,
-                ...loggerDefaultParams,
-                token,
-                error,
-            });
+            logPayload = { ...logPayload, ...loggerDefaultParams };
+            logPayload = helper.logErrorStack(logPayload, error);
+            logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);
         }
