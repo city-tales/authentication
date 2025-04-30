@@ -32,10 +32,16 @@ interface Helper {
     setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
     parseBooleanString(truthValue: string | null | undefined): boolean;
-    isEitherNullOrUndefined(value: number | string | null | undefined): boolean;
-    isEitherNullOrUndefinedOrEmpty(value: number | string | null | undefined): boolean;
-    isNeitherNullNorUndefined(value: number | string | null | undefined): boolean;
+    isNotEmpty(value: string): boolean;
+    isValidNumeric(value: number): boolean;
+    isValidBoolean(value: boolean): boolean;
+    isEitherNullOrUndefined(value: string | null | undefined): boolean;
+    isEitherNullOrUndefinedOrEmpty(value: string | null | undefined): boolean;
+    isGenericEitherNullOrUndefined(value: boolean | number | string | null | undefined): boolean;
+    isNeitherNullNorUndefined(value: string | null | undefined): boolean;
     isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): boolean;
+    isGenericNeitherNullNorUndefined(value: boolean | number | string | null | undefined): boolean;
+    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | string | null | undefined): boolean;
     passStringNullParams(value: string | null | undefined): string | null;
     passNumberNullParams(value: number | null | undefined): number | null;
     generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string;
@@ -316,15 +322,32 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    isEitherNullOrUndefined(value: number | string | null | undefined): boolean {
+    isNotEmpty(value: string): boolean {
+        return value === '' ? true : false;
+    }
+
+    isValidNumeric(value: number | null | undefined): boolean {
+        return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'number' ? true : false;
+    }
+
+    isValidBoolean(value: boolean | null | undefined): boolean {
+        return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'boolean' ? true : false;
+    }
+ 
+    isEitherNullOrUndefined(value: string | null | undefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isEitherNullOrUndefinedOrEmpty(value: number | string | null | undefined): boolean {
+    isEitherNullOrUndefinedOrEmpty(value: string | null | undefined): boolean {
+        if(this.isEitherNullOrUndefined(value)) return true;
+        return this.trimStringValue(value as string) === "" ? true : false;
+    }
+
+    isGenericEitherNullOrUndefined(value: boolean | string | number | null | undefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefined(value: number | string | null | undefined): boolean {
+    isNeitherNullNorUndefined(value: string | null | undefined): boolean {
         return (value !== null && value !== undefined) ? true : false;
     }
 
@@ -335,12 +358,25 @@ export class HelperImpl implements Helper {
         return false;
     }
 
+    isGenericNeitherNullNorUndefined(value: boolean | number | string | null | undefined): boolean {
+        return (value !== null && value !== undefined) ? true : false;
+    }
+
+    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | string | null | undefined): boolean {
+        if(this.isGenericNeitherNullNorUndefined(value)) {
+            if(typeof value === 'string') return this.isNotEmpty(value);
+            if(typeof value === 'number') return this.isValidNumeric(value) && this.isValidNumeric(value);
+            if(typeof value === 'boolean') return this.isValidBoolean(value) && this.isValidBoolean(value);
+        }
+        return false;
+    }
+
     passStringNullParams(value: string | null | undefined): string | null {
         return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING);
     }
 
     passNumberNullParams(value: number | null | undefined): number | null {
-        return this.isEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
+        return this.isGenericEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
     generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string {
@@ -389,7 +425,7 @@ export class HelperImpl implements Helper {
     }
 
     sanitiseNumericValue(value: number | null | undefined): number | null {
-        return this.isNeitherNullNorUndefined(value) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
+        return this.isGenericNeitherNullNorUndefined(value) && this.isValidNumeric(value!) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
     }
 
     sanitiseObject(object: Object): Object {
@@ -442,7 +478,7 @@ export class HelperImpl implements Helper {
         };
 
         ['message', 'details', 'code', 'statusCode', 'stack', 'name', 'token', 'retryVerification', 'success', 'verified'].forEach((key) => {
-            if (this.isNeitherNullNorUndefinedNorEmpty(error[key])) {
+            if (this.isGenericNeitherNullNorUndefinedNorInvalid(error[key])) {
                 cloneLogPayload.error[key] = error[key];
             }
         });
