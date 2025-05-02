@@ -19,12 +19,12 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
             labels,
         };
 
-        const userInfoFromData: RedisEmailKeySerialisation = {
+        const userInfoFromData = {
             email: helper.sanitiseStringValue(decryptedAuthToken.email)
         };
 
         const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
 
         try {

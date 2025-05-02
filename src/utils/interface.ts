@@ -1,5 +1,6 @@
 export interface RedisEmailKeySerialisation {
     email: string | null | undefined,
+    password: string | null | undefined,
 };
  
 export interface DecryptedAuthTokenInterface {

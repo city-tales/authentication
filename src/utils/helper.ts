@@ -27,6 +27,7 @@ interface Helper {
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
+    prepareVerificationUserRedisKeyValues(key: string, userInfo): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
     setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
@@ -240,6 +241,13 @@ export class HelperImpl implements Helper {
     }
 
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
+        return {
+            key: key,
+            email: this.isEitherNullOrUndefined(userInfo.email) ? Constants.SERIALISATION_KEYS.EMAIL : userInfo.email,
+        }
+    };
+
+    prepareVerificationUserRedisKeyValues(key: string, userInfo): Object {
         return {
             key: key,
             email: this.isEitherNullOrUndefined(userInfo.email) ? Constants.SERIALISATION_KEYS.EMAIL : userInfo.email,
