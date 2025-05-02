@@ -18,7 +18,7 @@ class UserLoginImpl implements UserLogin {
 
         const userTableName = Constants.TABLES.USER_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const query = `SELECT users._id, users.name, users.username, users.primary_country_code, users.phone_number, auth.is_email_verified from ${userTableName} 
+        const query = `SELECT users._id, users.name, users.username, users.primary_country_code, users.phone_number, users.password, auth.is_email_verified, auth.salt from ${userTableName} 
                         JOIN ${authTableName} ON users._id = auth.user_id
                         WHERE users.email = $1 AND users.password = $2 LIMIT 1`;
 
@@ -44,7 +44,6 @@ class UserLoginImpl implements UserLogin {
 
                 const userInfoFromData: RedisEmailKeySerialisation = {
                     email: helper.sanitiseStringValue(userInfo.email),
-                    password: helper.sanitiseStringValue(userInfo.password),
                 };
 
                 const redisKey: string = helper.serialiseRedisKeyValues(
@@ -55,6 +54,8 @@ class UserLoginImpl implements UserLogin {
                     _id: data._id,
                     name: data.name,
                     username: data.username,
+                    password: data.password,
+                    salt: data.salt,
                     isEmailVerified: data.is_email_verified,
                 };
 

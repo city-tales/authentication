@@ -20,7 +20,6 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
-            password: userInfo.password,
         };
         const redisKey: string = helper.serialiseRedisKeyValues(
             helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
@@ -39,16 +38,22 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
-                response.name = deSerialisedObject.name;
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
-                response.message = Constants.LOGIN_MESSAGE.SUCCESS;
-                response.statusCode = Constants.STATUS_CODES.OK;
-                response.retryVerification = !deSerialisedObject.isEmailVerified;
+                if(helper.verifyPassword(userInfo.password, deSerialisedObject.password, deSerialisedObject.salt)) {
+                    response.name = deSerialisedObject.name;
+                    response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
+                    response.message = Constants.LOGIN_MESSAGE.SUCCESS;
+                    response.statusCode = Constants.STATUS_CODES.OK;
+                    response.retryVerification = !deSerialisedObject.isEmailVerified;
 
-                loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
-                logPayload = { ...logPayload, ...loggerDefaultParams };
-                logPayload = helper.logResponse(logPayload, response);
-                logger.info({ ...logPayload });
+                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                    logPayload = { ...logPayload, ...loggerDefaultParams };
+                    logPayload = helper.logResponse(logPayload, response);
+                    logger.info({ ...logPayload });
+                }
+                else {
+                    response.message = Constants.LOGIN_MESSAGE.PASSWORD_DO_NOT_MATCH;
+                    response.statusCode = Constants.STATUS_CODES.NOT_FOUND;
+                }
             }
             else {
                 response.message = Constants.REDIS_MESSAGE.NO_CONTENT;

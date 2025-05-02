@@ -27,10 +27,10 @@ class UserEmailVerificationImpl implements UserEmailVerification {
             email: helper.sanitiseStringValue(decryptedAuthToken.email)
         };
         const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
         const existingRedisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
         );
 
         try {
@@ -55,6 +55,8 @@ class UserEmailVerificationImpl implements UserEmailVerification {
                         _id: deSerialisedObject._id,
                         name: deSerialisedObject.name,
                         username: deSerialisedObject.username,
+                        password: deSerialisedObject.password,
+                        salt: deSerialisedObject.salt,
                         isEmailVerified: true,
                     };
 

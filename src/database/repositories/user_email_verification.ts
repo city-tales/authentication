@@ -24,7 +24,7 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
         };
 
         const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
 
         try {

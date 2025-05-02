@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS AUTH(
     is_apple_verified Boolean,
     is_passwordless Boolean,
     is_mfa_enabled Boolean,
+    salt CHAR(32),
     user_id VARCHAR(256),
     FOREIGN KEY(user_id) REFERENCES USERS(_id)
 );

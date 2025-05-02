@@ -3,9 +3,9 @@ import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { GPRCUserSignUpInterface, UserSignUpInterface } from "../database/interface/user_signup.js";
+import { GPRCUserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
-import { DecryptedAuthTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
+import { DecryptedAuthTokenInterface, HashedPasswordInterface, RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
@@ -16,18 +16,19 @@ interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string): AuthVerificationInterface;
+    createAuthSchema(userId: string, generatedSalt: string): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
     isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
+    generateHashPassword(password: string): HashedPasswordInterface;
+    verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
     generateAuthToken(_id: string, username: string, email: string): string;
     decryptAuthToken(token: string): DecryptedAuthTokenInterface;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
-    prepareVerificationUserRedisKeyValues(key: string, userInfo): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
     setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
@@ -74,7 +75,7 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string): AuthVerificationInterface {
+    createAuthSchema(userId: string, generatedSalt: string): AuthVerificationInterface {
         return {
             _id: uuidv4(),
             is_email_verified: false,
@@ -82,6 +83,7 @@ export class HelperImpl implements Helper {
             is_apple_verified: false,
             is_passwordless: false,
             is_mfa_enabled: false,
+            salt: generatedSalt,
             user_id: userId,
         };
     }
@@ -191,6 +193,20 @@ export class HelperImpl implements Helper {
         return false;
     }
 
+    generateHashPassword(password: string): HashedPasswordInterface {
+        const salt = crypto.randomBytes(Constants.CRYPTO_CONFIG.BYTES_16).toString(Constants.CRYPTO_CONFIG.HEX);
+        const hashedPassword = crypto.scryptSync(password, salt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
+        return { 
+            salt, 
+            hashedPassword,
+        };
+    }
+
+    verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean {
+        const hashToCompare = crypto.scryptSync(inputPassword, storedSalt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
+        return hashToCompare === storedHash;
+    }
+
     generateAuthToken(_id: string, username: string, email: string): string {
         const payload = {
             _id: _id,
@@ -241,13 +257,6 @@ export class HelperImpl implements Helper {
     }
 
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
-        return {
-            key: key,
-            email: this.isEitherNullOrUndefined(userInfo.email) ? Constants.SERIALISATION_KEYS.EMAIL : userInfo.email,
-        }
-    };
-
-    prepareVerificationUserRedisKeyValues(key: string, userInfo): Object {
         return {
             key: key,
             email: this.isEitherNullOrUndefined(userInfo.email) ? Constants.SERIALISATION_KEYS.EMAIL : userInfo.email,
