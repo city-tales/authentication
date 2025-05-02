@@ -125,12 +125,20 @@ enum LOGIN_MESSAGE {
     PROCESSING = 'Processing',
     NOT_VERIFIED = 'Please verify email',
     NO_CONTENT = 'Account do not exists',
+    PASSWORD_DO_NOT_MATCH = 'Incorrect password',
     EMAIL_DO_NOT_EXISTS = 'Email do not exists',
     WRONG_AUTHENTICATION = 'Wrong Password',
     SUCCESS = 'Logging In',
     FAILED = 'Server Error',
     EMAIL_VERIFIED = 'Email successfully verified',
     ALREADY_VERIFIED = 'Email already verified',
+};
+
+enum CRYPTO_CONFIG {
+    EMPTY = '',
+    HEX = 'hex',
+    BYTES_16 = 16,
+    BYTES_64 = 64,
 };
 
 enum STATUS_CODES {
@@ -242,6 +250,7 @@ export class Constants {
     
     static readonly SIGNUP_MESSAGE = SIGNUP_MESSAGE;
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
+    static readonly CRYPTO_CONFIG = CRYPTO_CONFIG;
     
     static readonly STATUS_CODES = STATUS_CODES;
 

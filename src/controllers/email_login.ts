@@ -40,7 +40,7 @@ class UserLoginControllerImpl implements UserLoginController {
 
         try {
             const isKeyInRedis: LoginResponse = await userLoginRepositoryImpl.checkUserInRedis(userLoginSchemaInfo, context, labels);
-            if (isKeyInRedis.token !== Constants.LOGIN_MESSAGE.EMPTY_TOKEN && isKeyInRedis.message !== Constants.LOGIN_MESSAGE.PROCESSING) {
+            if(helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis.token) && isKeyInRedis.statusCode === Constants.STATUS_CODES.OK) {
                 response = isKeyInRedis;
             }
             else {

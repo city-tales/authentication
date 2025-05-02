@@ -17,7 +17,7 @@ class UserSignUpImpl implements UserSignUp {
     async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
         const userTableName = Constants.TABLES.USER_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const query = `SELECT users._id, users.name, users.username, auth.is_email_verified FROM ${userTableName}
+        const query = `SELECT users._id, users.name, users.username, users.password, auth.is_email_verified, auth.salt FROM ${userTableName}
                         JOIN ${authTableName} ON users._id = auth.user_id WHERE
                         (users.email = $1 OR $1 IS NULL) AND
                         (users.primary_country_code = $2 OR $2 IS NULL) AND
@@ -56,6 +56,8 @@ class UserSignUpImpl implements UserSignUp {
                     _id: data._id,
                     name: data.name,
                     username: data.username,
+                    password: data.password,
+                    salt: data.salt,
                     isEmailVerified: data.is_email_verified,
                 };
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
@@ -86,6 +88,8 @@ class UserSignUpImpl implements UserSignUp {
         const usersTableName = Constants.TABLES.USER_TABLE;
         const deviceTableName = Constants.TABLES.DEVICE_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
+        const { salt, hashedPassword } = helper.generateHashPassword(userInfo.password);
+        userInfo.password = hashedPassword;
 
         const usersDataQuery = `INSERT INTO ${usersTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const usersValuesArray = Object.values(userInfo);
@@ -93,8 +97,8 @@ class UserSignUpImpl implements UserSignUp {
         const deviceDataQuery = `INSERT INTO ${deviceTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const deviceValuesArray = Object.values(deviceInfo);
 
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7)`;
-        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id));
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id, salt));
 
         const usersAuthDataQuery: MultipleQueryObject = [
             {
@@ -120,6 +124,8 @@ class UserSignUpImpl implements UserSignUp {
                 _id: userInfo._id,
                 name: userInfo.name,
                 username: userInfo.username,
+                password: userInfo.password,
+                salt: salt,
                 isEmailVerified: false,
             };
 
