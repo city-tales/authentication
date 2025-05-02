@@ -10,16 +10,17 @@ import { UserLoginInterface } from "../interface/user_login.js";
 import { userLoginImpl } from "../models/user_login.js";
 
 interface UserLoginRepository {
-    checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
+    checkUserInRedis(userInfo: UserLoginInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
     loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
 }
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
-    async checkUserInRedis(email: string, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+    async checkUserInRedis(userInfo: UserLoginInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
         let response = new LoginResponse();
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
-            email: email,
+            email: userInfo.email,
+            password: userInfo.password,
         };
         const redisKey: string = helper.serialiseRedisKeyValues(
             helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
@@ -39,7 +40,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
                 response.name = deSerialisedObject.name;
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, email);
+                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !deSerialisedObject.isEmailVerified;

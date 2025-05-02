@@ -43,7 +43,8 @@ class UserLoginImpl implements UserLogin {
                 const deviceValuesArray = Object.values(deviceInfo);
 
                 const userInfoFromData: RedisEmailKeySerialisation = {
-                    email: helper.sanitiseStringValue(userInfo.email)
+                    email: helper.sanitiseStringValue(userInfo.email),
+                    password: helper.sanitiseStringValue(userInfo.password),
                 };
 
                 const redisKey: string = helper.serialiseRedisKeyValues(

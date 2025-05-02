@@ -24,6 +24,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
+            password: userInfo.password,
         };
 
         try {
@@ -88,6 +89,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
+            password: userInfo.password,
         };
 
         try {

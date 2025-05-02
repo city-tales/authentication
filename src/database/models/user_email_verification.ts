@@ -23,14 +23,14 @@ class UserEmailVerificationImpl implements UserEmailVerification {
         const query = `UPDATE ${authTableName} SET is_email_verified = true WHERE user_id = $1`;
         const valuesArray = [decryptedAuthToken._id];
 
-        const userInfoFromData: RedisEmailKeySerialisation = {
+        const userInfoFromData = {
             email: helper.sanitiseStringValue(decryptedAuthToken.email)
         };
         const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
         const existingRedisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+            helper.prepareVerificationUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
         );
 
         try {
