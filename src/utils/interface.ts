@@ -6,6 +6,14 @@ export interface DecryptedAuthTokenInterface {
     _id: string,
     username: string,
     email: string,
+    deviceType?: string,
+    browserInfo?: string,
+    ipAddress?: string,
+    deviceId?: string,
+    platform?: string,
+    deviceName?: string,
+    loginTime?: string,
+    source?: string,
 };
 
 export interface HashedPasswordInterface {

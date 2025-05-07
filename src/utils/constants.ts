@@ -46,6 +46,7 @@ enum DB_ERRORS {
 enum SERIALISATION_KEYS {
     USER = 'USER',
     VERIFICATION = 'VERIFICATION',
+    MAGIC_LINK = 'MAGIC_LINK',
     DEVICE = 'DEVICE',
     EMAIL = 'EMAIL',
     COUNTRY_CODE = 'COUNTRY_CODE',
@@ -72,6 +73,8 @@ enum LOKI_LOGGER_LABELS {
     SIGNUP_REQUEST = 'signupRequest',
     LOGIN_REQUEST = 'loginRequest',
     EMAIL_VERIFICATION = 'emailVerification',
+    MAGIC_LINK = 'magicLink',
+
     EMAIL = 'email',
     GOOGLE = 'google',
     PASSWORDLESS = 'passwordless',
@@ -132,6 +135,13 @@ enum LOGIN_MESSAGE {
     FAILED = 'Server Error',
     EMAIL_VERIFIED = 'Email successfully verified',
     ALREADY_VERIFIED = 'Email already verified',
+};
+
+enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
+    EMPTY_TOKEN = '',
+    LINK_ALREADY_SENT = 'Magic Link is already sent to the email address, Kindly check Spam',
+    SUCCESS = 'Logging In',
+    FAILED = 'Authentication Failed, Retry',
 };
 
 enum CRYPTO_CONFIG {
@@ -228,7 +238,6 @@ export class Constants {
     static readonly PORT = process.env.port;
     static readonly DB_PORT = '5432';
     static readonly SERVER_URL = `127.0.0.1:${this.PORT}`;
-    static readonly CURRENT_TIME = Date.now();
 
     static readonly DB = DB;
     static readonly QUEUE_DB = QUEUE_DB;
@@ -250,6 +259,7 @@ export class Constants {
     
     static readonly SIGNUP_MESSAGE = SIGNUP_MESSAGE;
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
+    static readonly PASSWORDLESS_AUTHENTICATION_MESSAGE = PASSWORDLESS_AUTHENTICATION_MESSAGE;
     static readonly CRYPTO_CONFIG = CRYPTO_CONFIG;
     
     static readonly STATUS_CODES = STATUS_CODES;

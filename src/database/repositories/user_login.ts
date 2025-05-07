@@ -40,7 +40,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
 
                 if(helper.verifyPassword(userInfo.password, deSerialisedObject.password, deSerialisedObject.salt)) {
                     response.name = deSerialisedObject.name;
-                    response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
+                    response.token = helper.generateUserAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email, labels.operation);
                     response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                     response.statusCode = Constants.STATUS_CODES.OK;
                     response.retryVerification = !deSerialisedObject.isEmailVerified;

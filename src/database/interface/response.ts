@@ -51,3 +51,15 @@ export class EmailVerificationResponse {
         this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
     }
 }
+
+export class PasswordlessAuthenticationResponse {
+    public token: string;
+    public message: string;
+    public statusCode: number;
+
+    constructor(response?: PasswordlessAuthenticationResponse) {
+        this.token = response?.token ?? Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+    }
+}

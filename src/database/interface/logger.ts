@@ -17,6 +17,11 @@ export interface EmailVerificationLabelInterface {
     type: string,
 };
 
+export interface PasswordlessAuthenticationLabelInterface {
+    operation: string,
+    type: string,
+};
+
 export interface AddJobToQueueLabelInterface {
     operation: string,
     subOperation: string,
