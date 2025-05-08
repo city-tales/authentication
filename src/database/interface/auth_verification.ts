@@ -5,6 +5,6 @@ export interface AuthVerificationInterface {
     is_apple_verified: boolean,
     is_passwordless: boolean,
     is_mfa_enabled: boolean,
-    salt: string,
+    salt?: string | null | undefined,
     user_id: string,
 };

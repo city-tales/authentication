@@ -17,5 +17,6 @@ export interface GPRCDeviceInterface {
     deviceId?: string,
     platform?: string,
     deviceName?: string,
-    loginTime: Date,
+    loginTime?: Date | string,
+    userId?: string,
 };

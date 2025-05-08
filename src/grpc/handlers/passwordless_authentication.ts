@@ -1,21 +1,21 @@
 import { logger } from "../../config/loki.js";
-import { userLoginControllerImpl } from "../../controllers/email_login.js";
-import { EmailLoginLabelInterface } from "../../database/interface/logger.js";
-import { LoginResponse } from "../../database/interface/response.js";
+import { passwordlessAuthenticationController } from "../../controllers/passwordless_authentication.js";
+import { PasswordlessAuthenticationLabelInterface } from "../../database/interface/logger.js";
+import { PasswordlessAuthenticationResponse } from "../../database/interface/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
-const emailLogin = async (call, callback) => {
+const passwordlessAuthentication = async (call, callback) => {
     const request = call.request;
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: EmailLoginLabelInterface = {
-        operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
-        type: Constants.LOKI_LOGGER_LABELS.EMAIL,
-    }
-    
-    let toRet: LoginResponse;
+    const labels: PasswordlessAuthenticationLabelInterface = {
+        operation: Constants.LOKI_LOGGER_LABELS.PASSWORDLESS,
+        type: Constants.LOKI_LOGGER_LABELS.MAGIC_LINK,
+    };
+
+    let toRet: PasswordlessAuthenticationResponse;
     let loggerDefaultParams = {};
     let logPayload = {
         labels,
@@ -23,9 +23,9 @@ const emailLogin = async (call, callback) => {
     };
 
     try {
-        const response: LoginResponse = await userLoginControllerImpl.loginUser(request.userEmailLoginRequest, request.userDeviceInformation, context, labels);
+        const response: PasswordlessAuthenticationResponse = await passwordlessAuthenticationController.generateUserPasswordlessTokenDetails(request.userPasswordlessAuthenticationRequest, request.userDeviceInformation, context, labels);
         toRet = response;
-        
+
         loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = helper.logResponse(logPayload, response);
@@ -41,10 +41,10 @@ const emailLogin = async (call, callback) => {
 
         callback(error, null);
     }
-    
+
     callback(null, toRet);
 };
 
 export {
-    emailLogin,
-}
+    passwordlessAuthentication
+};

@@ -2,7 +2,7 @@ import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
-import { DecryptedAuthTokenInterface, RedisEmailKeySerialisation } from "../../utils/interface.js";
+import { DecryptedAuthTokenInterface } from "../../utils/interface.js";
 import { queueEmployee } from "../../utils/workers.js";
 import { ContextInterface, EmailVerificationLabelInterface } from "../interface/logger.js";
 import { EmailVerificationResponse } from "../interface/response.js";
@@ -79,7 +79,7 @@ class UserEmailVerificationImpl implements UserEmailVerification {
         catch (error) {
             response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...decryptedAuthToken };
             logPayload = helper.logErrorStack(logPayload, error);
