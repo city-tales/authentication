@@ -13,6 +13,7 @@ export interface DecryptedAuthTokenInterface {
     platform?: string,
     deviceName?: string,
     loginTime?: string,
+    userId?: string,
     source?: string,
 };
 

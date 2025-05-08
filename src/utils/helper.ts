@@ -240,6 +240,7 @@ export class HelperImpl implements Helper {
             platform: sanitisedDeviceInfo.platform,
             deviceName: sanitisedDeviceInfo.deviceName,
             loginTime: sanitisedDeviceInfo.loginTime || Utils.CURRENT_TIME,
+            userId: sanitisedDeviceInfo?.userId ?? null,
             source: label,
         };
 

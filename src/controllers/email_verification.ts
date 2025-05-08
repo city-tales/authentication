@@ -39,13 +39,14 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
                     platform: decryptedAuthToken.platform,
                     deviceName: decryptedAuthToken.deviceName,
                     loginTime: new Date(decryptedAuthToken.loginTime || Utils.CURRENT_TIME),
+                    userId: decryptedAuthToken.userId,
                 };
                 const userSchemaInfo: PasswordlessAuthenticationInterface = {
                     _id: decryptedAuthToken._id,
                     username: decryptedAuthToken.username,
                     email: decryptedAuthToken.email,
                 };  
-                const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(rawDeviceSchemaInfo, decryptedAuthToken._id);
+                const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(rawDeviceSchemaInfo, decryptedAuthToken.userId);
                 
                 const userResponse: EmailVerificationResponse = await userPasswordlessAuthenticationRepositories.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
                 response = userResponse;

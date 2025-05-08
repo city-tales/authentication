@@ -3,19 +3,19 @@ import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 import { PasswordlessAuthenticationTokenInterface, RedisEmailKeySerialisation } from "../../utils/interface.js";
-import { DeviceInterface } from "../interface/device_info.js";
+import { DeviceInterface, GPRCDeviceInterface } from "../interface/device_info.js";
 import { ContextInterface, PasswordlessAuthenticationLabelInterface } from "../interface/logger.js";
 import { EmailVerificationResponse, PasswordlessAuthenticationResponse } from "../interface/response.js";
 import { PasswordlessAuthenticationInterface } from "../interface/user_passwordless_authentication.js";
 import { userPasswordlessAuthenticationImpl } from "../models/user_passwordless_authentication.js";
 
 interface UserPasswordlessAuthenticationRepositories {
-    generateUserPasswordlessTokenDetails(userInfo: PasswordlessAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<PasswordlessAuthenticationResponse>;
+    generateUserPasswordlessTokenDetails(userInfo: PasswordlessAuthenticationInterface, deviceInfo: GPRCDeviceInterface, deviceSchemaInfo: DeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<PasswordlessAuthenticationResponse>;
     createUser(userInfo: PasswordlessAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<EmailVerificationResponse>;
 }
 
 class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordlessAuthenticationRepositories {
-    async generateUserPasswordlessTokenDetails(userInfo: PasswordlessAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<PasswordlessAuthenticationResponse> {
+    async generateUserPasswordlessTokenDetails(userInfo: PasswordlessAuthenticationInterface, deviceInfo: GPRCDeviceInterface, deviceSchemaInfo: DeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<PasswordlessAuthenticationResponse> {
         let response = new PasswordlessAuthenticationResponse();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -39,26 +39,24 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
                     email: userInfo.email,
                 };
                 generatedToken = helper.generatePasswordlessAuthenticationAuthToken(prepareExistingUserToken, deviceInfo, labels.operation);
-
-                response.token = generatedToken;
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.LINK_ALREADY_SENT;
             }
             else {
-                const isExistingUser: PasswordlessAuthenticationResponse = await userPasswordlessAuthenticationImpl.checkIfUserExists(userInfo, deviceInfo, context, labels);
+                const isExistingUser: PasswordlessAuthenticationResponse = await userPasswordlessAuthenticationImpl.checkIfUserExists(userInfo, deviceSchemaInfo, context, labels);
                 if (isExistingUser.message === Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.EXISTING_USER) {
                     const prepareExistingUserToken: PasswordlessAuthenticationTokenInterface = {
                         _id: isExistingUser._id!,
                         username: isExistingUser.username!,
                         email: userInfo.email,
                     };
-                    deviceInfo.user_id = isExistingUser._id;
+                    deviceInfo.userId = isExistingUser._id;
                     generatedToken = helper.generatePasswordlessAuthenticationAuthToken(prepareExistingUserToken, deviceInfo, labels.operation);
-                    
-                    response.token = generatedToken;
                 }
                 else {
+                    deviceInfo.userId = userInfo._id;
                     generatedToken = helper.generatePasswordlessAuthenticationAuthToken(userInfo, deviceInfo, labels.operation);
                 }
+                response.token = generatedToken;
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.SUCCESS;
             }
             response.statusCode = Constants.STATUS_CODES.OK;
@@ -104,6 +102,9 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
             if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
                 await userPasswordlessAuthenticationImpl.logUserDevice(deviceInfo, context, labels);
+                response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.ALREADY_VERIFIED;
+                response.statusCode = Constants.STATUS_CODES.OK;
+                response.success = true;
 
                 loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
                 logPayload = { ...logPayload, ...loggerDefaultParams };

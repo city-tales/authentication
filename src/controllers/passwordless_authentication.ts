@@ -24,7 +24,7 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
         const userSchemaInfo: PasswordlessAuthenticationInterface = this.mapUserPasswordlessAuthenticationSchema(userInfo);
         const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
 
-        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, deviceSchemaInfo, context, labels);
+        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, deviceInfo, deviceSchemaInfo, context, labels);
     }
 }
 
