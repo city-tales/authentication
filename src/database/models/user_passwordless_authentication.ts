@@ -76,7 +76,8 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                    value: helper.serialiseRedisKeyValues(redisEmailValue),
+                    timeout: Constants.DB_TIMEOUTS.SHORT_CACHE_DB_REDIS_TIMEOUT,
                 });
 
                 response._id = data._id;
@@ -202,7 +203,8 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                    value: helper.serialiseRedisKeyValues(redisEmailValue),
+                    timeout: Constants.DB_TIMEOUTS.VERY_SHORT_CACHE_DB_REDIS_TIMEOUT,
                 });
             }
         }

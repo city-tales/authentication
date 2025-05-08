@@ -246,7 +246,7 @@ export class HelperImpl implements Helper {
 
         const token: string = jwt.sign(payload, privateKey, {
             algorithm: Constants.JWT_CONFIG.ALGORITHM,
-            expiresIn: Constants.JWT_CONFIG.EXPIRY
+            expiresIn: Constants.JWT_CONFIG.VERY_SHORT_LIVED
         });
 
         return token;
