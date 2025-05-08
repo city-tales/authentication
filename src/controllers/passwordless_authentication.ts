@@ -1,5 +1,5 @@
 import { uuidv4 } from "../config/imports.js";
-import { GPRCDeviceInterface } from "../database/interface/device_info.js";
+import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { ContextInterface, PasswordlessAuthenticationLabelInterface } from "../database/interface/logger.js";
 import { PasswordlessAuthenticationResponse } from "../database/interface/response.js";
 import { GPRCPasswordlessAuthenticationInterface, PasswordlessAuthenticationInterface } from "../database/interface/user_passwordless_authentication.js";
@@ -15,7 +15,6 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
     mapUserPasswordlessAuthenticationSchema(userInfo: GPRCPasswordlessAuthenticationInterface): PasswordlessAuthenticationInterface {
         return {
             _id: uuidv4(),
-            name: userInfo.name,
             username: helper.generateUniqueUserName(userInfo),
             email: userInfo.email,
         };
@@ -23,7 +22,9 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
 
     async generateUserPasswordlessTokenDetails(userInfo: GPRCPasswordlessAuthenticationInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: PasswordlessAuthenticationLabelInterface): Promise<PasswordlessAuthenticationResponse> {
         const userSchemaInfo: PasswordlessAuthenticationInterface = this.mapUserPasswordlessAuthenticationSchema(userInfo);
-        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, deviceInfo, context, labels);
+        const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
+
+        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, deviceSchemaInfo, context, labels);
     }
 }
 

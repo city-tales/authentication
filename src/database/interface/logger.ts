@@ -1,5 +1,6 @@
 export interface ContextInterface {
     tracerId: string,
+    source?: string,
 };
 
 export interface EmailSignUpLabelInterface {
@@ -15,6 +16,7 @@ export interface EmailLoginLabelInterface {
 export interface EmailVerificationLabelInterface {
     operation: string,
     type: string,
+    source?: string,
 };
 
 export interface PasswordlessAuthenticationLabelInterface {

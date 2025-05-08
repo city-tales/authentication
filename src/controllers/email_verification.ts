@@ -47,12 +47,12 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
                 };  
                 const deviceSchemaInfo: DeviceInterface = helper.mapDeviceSchema(rawDeviceSchemaInfo, decryptedAuthToken._id);
                 
-                const dbResponse: EmailVerificationResponse = await userPasswordlessAuthenticationRepositories.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
-                response = dbResponse;
+                const userResponse: EmailVerificationResponse = await userPasswordlessAuthenticationRepositories.createUser(userSchemaInfo, deviceSchemaInfo, context, labels);
+                response = userResponse;
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });

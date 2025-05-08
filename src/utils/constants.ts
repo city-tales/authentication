@@ -46,6 +46,7 @@ enum DB_ERRORS {
 enum SERIALISATION_KEYS {
     USER = 'USER',
     VERIFICATION = 'VERIFICATION',
+    PASSWORDLESS = 'PASSWORDLESS',
     MAGIC_LINK = 'MAGIC_LINK',
     DEVICE = 'DEVICE',
     EMAIL = 'EMAIL',
@@ -138,7 +139,12 @@ enum LOGIN_MESSAGE {
 };
 
 enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
+    EMPTY = '',
     EMPTY_TOKEN = '',
+    NO_CONTENT = 'Email do not exists',
+    UPDATED = 'User details updated',
+    ALREADY_VERIFIED = 'User already verified',
+    EXISTING_USER = 'Account Already exists',
     LINK_ALREADY_SENT = 'Magic Link is already sent to the email address, Kindly check Spam',
     SUCCESS = 'Logging In',
     FAILED = 'Authentication Failed, Retry',

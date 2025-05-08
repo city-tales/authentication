@@ -15,7 +15,7 @@ const emailLogin = async (call, callback) => {
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
     }
     
-    let toRet;
+    let toRet: LoginResponse;
     let loggerDefaultParams = {};
     let logPayload = {
         labels,

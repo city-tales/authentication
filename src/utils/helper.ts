@@ -4,20 +4,19 @@ import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { Constants } from "./constants.js";
-import { DecryptedAuthTokenInterface, HashedPasswordInterface, RedisEmailKeySerialisation } from "./interface.js";
+import { DecryptedAuthTokenInterface, HashedPasswordInterface, PasswordlessAuthenticationTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
 import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
 import { RedisResponse } from "../database/interface/response.js";
-import { PasswordlessAuthenticationInterface } from "../database/interface/user_passwordless_authentication.js";
 import { Utils } from "./utils.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string, generatedSalt: string | null | undefined, isEmailVerified?: boolean): AuthVerificationInterface;
+    createAuthSchema(userId: string, generatedSalt: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
@@ -26,7 +25,7 @@ interface Helper {
     generateHashPassword(password: string): HashedPasswordInterface;
     verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
     generateUserAuthToken(_id: string, username: string, email: string, label: string): string;
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationInterface, deviceInfo: GPRCDeviceInterface, label: string): string;
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string;
     decryptAuthToken(token: string): DecryptedAuthTokenInterface;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
@@ -77,13 +76,13 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string, generatedSalt?: string | null | undefined, isEmailVerified?: boolean): AuthVerificationInterface {
+    createAuthSchema(userId: string, generatedSalt?: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface {
         return {
             _id: uuidv4(),
             is_email_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isEmailVerified) ? isEmailVerified : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_google_verified: false,
             is_apple_verified: false,
-            is_passwordless: false,
+            is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? isPasswordless : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_mfa_enabled: false,
             salt: this.isEitherNullOrUndefined(generatedSalt) ? null : generatedSalt,
             user_id: userId,
@@ -225,7 +224,7 @@ export class HelperImpl implements Helper {
         return token;
     }
 
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationInterface, deviceInfo: GPRCDeviceInterface, label: string): string {
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string {
         const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
             helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );

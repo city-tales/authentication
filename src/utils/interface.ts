@@ -20,3 +20,9 @@ export interface HashedPasswordInterface {
     salt: string,
     hashedPassword: string,
 };
+
+export interface PasswordlessAuthenticationTokenInterface {
+    _id: string,
+    username: string,
+    email: string,
+};
