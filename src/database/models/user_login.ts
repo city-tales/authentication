@@ -73,7 +73,7 @@ class UserLoginImpl implements UserLogin {
                 });
 
                 response.name = data.name;
-                response.token = helper.generateAuthToken(data._id, data.username, userInfo.email);
+                response.token = helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !data.is_email_verified;

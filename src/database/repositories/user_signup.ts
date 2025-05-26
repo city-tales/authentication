@@ -45,7 +45,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
             else {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
-                response.token = helper.generateAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email);
+                response.token = helper.generateUserAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email, labels.operation);
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = deSerialisedObject.isEmailVerified;
@@ -71,12 +71,7 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
     }
 
     async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
-        let response: SignUpResponse = {
-            token: Constants.SIGNUP_MESSAGE.EMPTY_TOKEN,
-            message: Constants.SIGNUP_MESSAGE.PROCESSING,
-            statusCode: Constants.STATUS_CODES.PROCESSING,
-            verified: false,
-        };
+        let response = new SignUpResponse();
         let loggerDefaultParams = {};
         let logPayload = {
             labels,

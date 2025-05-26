@@ -2,7 +2,7 @@ import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
-import { DecryptedAuthTokenInterface, RedisEmailKeySerialisation } from "../../utils/interface.js";
+import { DecryptedAuthTokenInterface } from "../../utils/interface.js";
 import { ContextInterface, EmailVerificationLabelInterface } from "../interface/logger.js";
 import { EmailVerificationResponse } from "../interface/response.js";
 import { userEmailVerificationImpl } from "../models/user_email_verification.js";
@@ -38,7 +38,7 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
                     response.message = Constants.LOGIN_MESSAGE.ALREADY_VERIFIED;
                     response.statusCode = Constants.STATUS_CODES.OK;
 
-                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
                     logPayload = { ...logPayload, ...loggerDefaultParams };
                     logPayload = { ...logPayload, ...{ redisKey: redisKey } };
                     logPayload = helper.logResponse(logPayload, response);
@@ -52,7 +52,7 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
             response = userResponse;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...decryptedAuthToken };
             logPayload = helper.logErrorStack(logPayload, error);

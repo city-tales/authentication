@@ -3,20 +3,20 @@ import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { GPRCUserSignUpInterface } from "../database/interface/user_signup.js";
 import { Constants } from "./constants.js";
-import { DecryptedAuthTokenInterface, HashedPasswordInterface, RedisEmailKeySerialisation } from "./interface.js";
+import { DecryptedAuthTokenInterface, HashedPasswordInterface, PasswordlessAuthenticationTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
 import { MultipleQueryObject } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
 import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
 import { RedisResponse } from "../database/interface/response.js";
+import { Utils } from "./utils.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string, generatedSalt: string): AuthVerificationInterface;
+    createAuthSchema(userId: string, generatedSalt: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
@@ -24,7 +24,8 @@ interface Helper {
     isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     generateHashPassword(password: string): HashedPasswordInterface;
     verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
-    generateAuthToken(_id: string, username: string, email: string): string;
+    generateUserAuthToken(_id: string, username: string, email: string, label: string): string;
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string;
     decryptAuthToken(token: string): DecryptedAuthTokenInterface;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
@@ -46,7 +47,7 @@ interface Helper {
     isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | string | null | undefined): boolean;
     passStringNullParams(value: string | null | undefined): string | null;
     passNumberNullParams(value: number | null | undefined): number | null;
-    generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string;
+    generateUniqueUserName(userInfo): string;
     trimStringValue(value: string): string;
     sanitiseStringValue(value: string | null | undefined): string | null;
     sanitiseNumericValue(value: number | null | undefined): number | null;
@@ -75,15 +76,15 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string, generatedSalt: string): AuthVerificationInterface {
+    createAuthSchema(userId: string, generatedSalt?: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface {
         return {
             _id: uuidv4(),
-            is_email_verified: false,
+            is_email_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isEmailVerified) ? isEmailVerified : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_google_verified: false,
             is_apple_verified: false,
-            is_passwordless: false,
+            is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? isPasswordless : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_mfa_enabled: false,
-            salt: generatedSalt,
+            salt: this.isEitherNullOrUndefined(generatedSalt) ? null : generatedSalt,
             user_id: userId,
         };
     }
@@ -207,16 +208,45 @@ export class HelperImpl implements Helper {
         return hashToCompare === storedHash;
     }
 
-    generateAuthToken(_id: string, username: string, email: string): string {
+    generateUserAuthToken(_id: string, username: string, email: string, label: string): string {
         const payload = {
             _id: _id,
             username: username,
             email: email,
+            source: label
         };
 
         const token: string = jwt.sign(payload, privateKey, {
             algorithm: Constants.JWT_CONFIG.ALGORITHM,
             expiresIn: Constants.JWT_CONFIG.EXPIRY
+        });
+
+        return token;
+    }
+
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string {
+        const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
+            helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
+        );
+
+        const payload = {
+            _id: userInfo._id,
+            username: userInfo.username,
+            email: userInfo.email,
+            deviceType: sanitisedDeviceInfo.deviceType,
+            browserInfo: sanitisedDeviceInfo.browserInfo,
+            ipAddress: sanitisedDeviceInfo.ipAddress,
+            deviceId: sanitisedDeviceInfo.deviceId,
+            platform: sanitisedDeviceInfo.platform,
+            deviceName: sanitisedDeviceInfo.deviceName,
+            loginTime: sanitisedDeviceInfo.loginTime || Utils.CURRENT_TIME,
+            userId: sanitisedDeviceInfo?.userId ?? null,
+            source: label,
+        };
+
+        const token: string = jwt.sign(payload, privateKey, {
+            algorithm: Constants.JWT_CONFIG.ALGORITHM,
+            expiresIn: Constants.JWT_CONFIG.VERY_SHORT_LIVED
         });
 
         return token;
@@ -328,7 +358,7 @@ export class HelperImpl implements Helper {
             device_id: sanitisedDeviceInfo.deviceId,
             platform: sanitisedDeviceInfo.platform,
             device_name: sanitisedDeviceInfo.deviceName,
-            login_time: sanitisedDeviceInfo.loginTime || Constants.CURRENT_TIME,
+            login_time: new Date(sanitisedDeviceInfo?.loginTime || Utils.CURRENT_TIME),
             user_id: userId ?? null,
         };
     }
@@ -396,7 +426,7 @@ export class HelperImpl implements Helper {
         return this.isGenericEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
-    generateUniqueUserName(userInfo: GPRCUserSignUpInterface): string {
+    generateUniqueUserName(userInfo): string {
         const config = {
             dictionaries: [adjectives, nouns],
             separator: '-',

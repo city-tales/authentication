@@ -47,7 +47,7 @@ class UserSignUpImpl implements UserSignUp {
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
                 const data = queryResponse.rows[0];
-                if (!data.is_email_verified) response.token = helper.generateAuthToken(data._id, data.username, valuesArray['email']);
+                if (!data.is_email_verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation);
 
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = data.is_email_verified;
@@ -130,7 +130,7 @@ class UserSignUpImpl implements UserSignUp {
             };
 
             if (queryResponse.length) {
-                response.token = helper.generateAuthToken(userInfo._id, userInfo.username, userInfo.email);
+                response.token = helper.generateUserAuthToken(userInfo._id, userInfo.username, userInfo.email, labels.operation);
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
