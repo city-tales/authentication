@@ -4,7 +4,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import lodash from "lodash";
 import _ from 'lodash';
-import crypto from "crypto";
+import * as crypto from 'crypto';
 import { faker } from '@faker-js/faker';
 import postgres from "pg"; const { Pool } = postgres;
 import redis from "redis"; const { createClient } = redis;

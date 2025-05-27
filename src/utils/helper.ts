@@ -1,22 +1,22 @@
-import { jwtPublicKey, privateKey } from "../config/config.js";
-import { crypto, adjectives, nouns, uniqueUsernameGenerator, faker, jwt, uuidv4 } from "../config/imports.js";
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
 import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
 import { Constants } from "./constants.js";
 import { DecryptedAuthTokenInterface, HashedPasswordInterface, PasswordlessAuthenticationTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
-import { MultipleQueryObject } from "./custom_types.js";
+import { BooleanOrNullOrUndefined, MultipleQueryObject, NumberOrNull, NumberOrNullOrUndefined, StringOrNull, StringOrNullOrUndefined, StringOrUndefined } from "./custom_types.js";
 import { ContextInterface } from "../database/interface/logger.js";
 import { logger } from "../config/loki.js";
 import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
 import { RedisResponse } from "../database/interface/response.js";
 import { Utils } from "./utils.js";
+import { crypto, adjectives, faker, jwt, nouns, uniqueUsernameGenerator, uuidv4 } from "../config/imports.js";
+import { jwtPublicKey, privateKey } from "../config/config.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string, generatedSalt: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface;
+    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, appleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
@@ -34,27 +34,27 @@ interface Helper {
     parseRedisValueToObject(value: string);
     setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
     mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
-    parseBooleanString(truthValue: string | null | undefined): boolean;
+    parseBooleanString(truthValue: StringOrNullOrUndefined): boolean;
     isNotEmpty(value: string): boolean;
     isValidNumeric(value: number): boolean;
     isValidBoolean(value: boolean): boolean;
-    isEitherNullOrUndefined(value: string | null | undefined): boolean;
-    isEitherNullOrUndefinedOrEmpty(value: string | null | undefined): boolean;
-    isGenericEitherNullOrUndefined(value: boolean | number | string | null | undefined): boolean;
-    isNeitherNullNorUndefined(value: string | null | undefined): boolean;
-    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): boolean;
-    isGenericNeitherNullNorUndefined(value: boolean | number | string | null | undefined): boolean;
-    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | string | null | undefined): boolean;
-    passStringNullParams(value: string | null | undefined): string | null;
-    passNumberNullParams(value: number | null | undefined): number | null;
+    isEitherNullOrUndefined(value: StringOrNullOrUndefined): boolean;
+    isEitherNullOrUndefinedOrEmpty(value: StringOrNullOrUndefined): boolean;
+    isGenericEitherNullOrUndefined(value: boolean | number | StringOrNullOrUndefined): boolean;
+    isNeitherNullNorUndefined(value: StringOrNullOrUndefined): boolean;
+    isNeitherNullNorUndefinedNorEmpty(value: StringOrNullOrUndefined): boolean;
+    isGenericNeitherNullNorUndefined(value: boolean | number | StringOrNullOrUndefined): boolean;
+    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | StringOrNullOrUndefined): boolean;
+    passStringNullParams(value: StringOrNullOrUndefined): StringOrNull;
+    passNumberNullParams(value: NumberOrNullOrUndefined): NumberOrNull;
     generateUniqueUserName(userInfo): string;
     trimStringValue(value: string): string;
-    sanitiseStringValue(value: string | null | undefined): string | null;
-    sanitiseNumericValue(value: number | null | undefined): number | null;
+    sanitiseStringValue(value: StringOrNullOrUndefined): StringOrNull;
+    sanitiseNumericValue(value: NumberOrNullOrUndefined): NumberOrNull;
     sanitiseObject(object: Object): Object;
     generateContext();
-    generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
-    generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: string | undefined);
+    generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
+    generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
     logErrorStack(logPayload: any, error: any);
     logResponse(logPayload: any, response);
 };
@@ -76,15 +76,17 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string, generatedSalt?: string | null | undefined, isEmailVerified?: boolean, isPasswordless?: boolean): AuthVerificationInterface {
+    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, appleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface {
         return {
             _id: uuidv4(),
+            google_email: googleEmail ?? null,
+            apple_email: appleEmail ?? null,
             is_email_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isEmailVerified) ? isEmailVerified : false, Constants.TYPE_SWITCH.BOOLEAN),
-            is_google_verified: false,
-            is_apple_verified: false,
-            is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? isPasswordless : false, Constants.TYPE_SWITCH.BOOLEAN),
+            is_google_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(googleEmail) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
+            is_apple_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(appleEmail) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
+            is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_mfa_enabled: false,
-            salt: this.isEitherNullOrUndefined(generatedSalt) ? null : generatedSalt,
+            salt: this.isEitherNullOrUndefinedOrEmpty(generatedSalt) ? null : generatedSalt,
             user_id: userId,
         };
     }
@@ -345,7 +347,7 @@ export class HelperImpl implements Helper {
         }
     }
 
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: string): DeviceInterface {
+    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: StringOrNull): DeviceInterface {
         const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
             helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
@@ -363,7 +365,7 @@ export class HelperImpl implements Helper {
         };
     }
 
-    parseBooleanString(truthValue: string | null | undefined): boolean {
+    parseBooleanString(truthValue: StringOrNullOrUndefined): boolean {
         if (this.isNeitherNullNorUndefined(truthValue))
             return truthValue === Constants.BOOLEAN_VALUES.TRUE ? true : false;
         return false;
@@ -373,43 +375,43 @@ export class HelperImpl implements Helper {
         return value === '' ? true : false;
     }
 
-    isValidNumeric(value: number | null | undefined): boolean {
+    isValidNumeric(value: NumberOrNullOrUndefined): boolean {
         return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'number' ? true : false;
     }
 
-    isValidBoolean(value: boolean | null | undefined): boolean {
+    isValidBoolean(value: BooleanOrNullOrUndefined): boolean {
         return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'boolean' ? true : false;
     }
  
-    isEitherNullOrUndefined(value: string | null | undefined): boolean {
+    isEitherNullOrUndefined(value: StringOrNullOrUndefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isEitherNullOrUndefinedOrEmpty(value: string | null | undefined): boolean {
+    isEitherNullOrUndefinedOrEmpty(value: StringOrNullOrUndefined): boolean {
         if(this.isEitherNullOrUndefined(value)) return true;
         return this.trimStringValue(value as string) === "" ? true : false;
     }
 
-    isGenericEitherNullOrUndefined(value: boolean | string | number | null | undefined): boolean {
+    isGenericEitherNullOrUndefined(value: boolean | string | NumberOrNullOrUndefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefined(value: string | null | undefined): boolean {
+    isNeitherNullNorUndefined(value: StringOrNullOrUndefined): boolean {
         return (value !== null && value !== undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefinedNorEmpty(value: string | null | undefined): boolean {
+    isNeitherNullNorUndefinedNorEmpty(value: StringOrNullOrUndefined): boolean {
         if (this.isNeitherNullNorUndefined(value)) {
             return this.trimStringValue(value as string) !== "" ? true : false;
         }
         return false;
     }
 
-    isGenericNeitherNullNorUndefined(value: boolean | number | string | null | undefined): boolean {
+    isGenericNeitherNullNorUndefined(value: boolean | number | StringOrNullOrUndefined): boolean {
         return (value !== null && value !== undefined) ? true : false;
     }
 
-    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | string | null | undefined): boolean {
+    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | StringOrNullOrUndefined): boolean {
         if(this.isGenericNeitherNullNorUndefined(value)) {
             if(typeof value === 'string') return this.isNotEmpty(value);
             if(typeof value === 'number') return this.isValidNumeric(value) && this.isValidNumeric(value);
@@ -418,11 +420,11 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    passStringNullParams(value: string | null | undefined): string | null {
+    passStringNullParams(value: StringOrNullOrUndefined): StringOrNull {
         return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING);
     }
 
-    passNumberNullParams(value: number | null | undefined): number | null {
+    passNumberNullParams(value: NumberOrNullOrUndefined): NumberOrNull {
         return this.isGenericEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
@@ -467,11 +469,11 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    sanitiseStringValue(value: string | null | undefined): string | null {
+    sanitiseStringValue(value: StringOrNullOrUndefined): StringOrNull {
         return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING) : null;
     }
 
-    sanitiseNumericValue(value: number | null | undefined): number | null {
+    sanitiseNumericValue(value: NumberOrNullOrUndefined): NumberOrNull {
         return this.isGenericNeitherNullNorUndefined(value) && this.isValidNumeric(value!) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
     }
 
@@ -492,7 +494,7 @@ export class HelperImpl implements Helper {
         };
     }
 
-    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined) {
+    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
         const timestamp = Date.now();
 
         return {
@@ -505,7 +507,7 @@ export class HelperImpl implements Helper {
         };
     }
 
-    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: string | undefined) {
+    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
         const timestamp = Date.now();
 
         return {
