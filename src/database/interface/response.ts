@@ -67,3 +67,15 @@ export class PasswordlessAuthenticationResponse {
         this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
     }
 }
+
+export class GoogleAuthenticationResponse {
+    public token: string;
+    public message: string;
+    public statusCode: number;
+
+    constructor(response?: GoogleAuthenticationResponse) {
+        this.token = response?.token ?? Constants.GOOGLE_AUTHENTICATION_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.GOOGLE_AUTHENTICATION_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+    }
+}

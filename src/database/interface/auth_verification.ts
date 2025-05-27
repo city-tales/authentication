@@ -1,10 +1,12 @@
+import { BooleanOrNull, StringOrNull } from "../../utils/custom_types.js";
+
 export interface AuthVerificationInterface {
-    _id: string,
-    is_email_verified: boolean,
-    is_google_verified: boolean,
-    is_apple_verified: boolean,
-    is_passwordless: boolean,
-    is_mfa_enabled: boolean,
-    salt?: string | null | undefined,
-    user_id: string,
+    _id: StringOrNull,
+    google_email?: StringOrNull,
+    is_email_verified?: BooleanOrNull,
+    is_google_verified?: BooleanOrNull,
+    is_passwordless?: BooleanOrNull,
+    is_mfa_enabled?: BooleanOrNull,
+    salt?: StringOrNull,
+    user_id: StringOrNull,
 };

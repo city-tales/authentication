@@ -76,6 +76,7 @@ enum LOKI_LOGGER_LABELS {
     SIGNUP_REQUEST = 'signupRequest',
     LOGIN_REQUEST = 'loginRequest',
     EMAIL_VERIFICATION = 'emailVerification',
+    GOOGLE_AUTHENTICATION = 'googleAuthentication',
     MAGIC_LINK = 'magicLink',
 
     EMAIL = 'email',
@@ -105,6 +106,7 @@ enum DEV_CONTROLLER {
 
 enum TABLES {
     USER_TABLE = 'users',
+    USER_DATA_TABLE = 'users_data',
     DEVICE_TABLE = 'device',
     AUTH_TABLE = 'auth',
 };
@@ -151,6 +153,17 @@ enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
     LINK_ALREADY_SENT = 'Magic Link is already sent to the email address, Kindly check Spam',
     SUCCESS = 'Logging In',
     FAILED = 'Authentication Failed, Retry',
+};
+
+
+enum GOOGLE_AUTHENTICATION_MESSAGE {
+    EMPTY = '',
+    EMPTY_TOKEN = '',
+    PROCESSING = 'Processing',
+    CREATED = 'Account has been created successfully',
+    EXISTING_USER = 'Account Already exists',
+    SUCCESS = 'Logging In',
+    FAILED = 'Server Error',
 };
 
 enum CRYPTO_CONFIG {
@@ -269,6 +282,7 @@ export class Constants {
     static readonly SIGNUP_MESSAGE = SIGNUP_MESSAGE;
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
     static readonly PASSWORDLESS_AUTHENTICATION_MESSAGE = PASSWORDLESS_AUTHENTICATION_MESSAGE;
+    static readonly GOOGLE_AUTHENTICATION_MESSAGE = GOOGLE_AUTHENTICATION_MESSAGE;
     static readonly CRYPTO_CONFIG = CRYPTO_CONFIG;
     
     static readonly STATUS_CODES = STATUS_CODES;
