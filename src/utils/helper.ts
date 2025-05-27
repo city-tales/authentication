@@ -16,7 +16,7 @@ interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, appleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface;
+    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface;
     executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
     executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
@@ -76,14 +76,12 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, appleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface {
+    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface {
         return {
             _id: uuidv4(),
             google_email: googleEmail ?? null,
-            apple_email: appleEmail ?? null,
             is_email_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isEmailVerified) ? isEmailVerified : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_google_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(googleEmail) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
-            is_apple_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(appleEmail) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
             is_mfa_enabled: false,
             salt: this.isEitherNullOrUndefinedOrEmpty(generatedSalt) ? null : generatedSalt,

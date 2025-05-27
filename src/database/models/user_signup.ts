@@ -98,7 +98,7 @@ class UserSignUpImpl implements UserSignUp {
         const deviceValuesArray = Object.values(deviceInfo);
 
         const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
-        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id, salt));
+        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id, null, salt));
 
         const usersAuthDataQuery: MultipleQueryObject = [
             {
