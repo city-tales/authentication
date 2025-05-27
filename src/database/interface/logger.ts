@@ -1,6 +1,8 @@
+import { StringOrNull } from "../../utils/custom_types.js";
+
 export interface ContextInterface {
     tracerId: string,
-    source?: string,
+    source?: StringOrNull,
 };
 
 export interface EmailSignUpLabelInterface {
@@ -16,12 +18,17 @@ export interface EmailLoginLabelInterface {
 export interface EmailVerificationLabelInterface {
     operation: string,
     type: string,
-    source?: string,
+    source?: StringOrNull,
 };
 
 export interface PasswordlessAuthenticationLabelInterface {
     operation: string,
     type: string,
+};
+
+export interface GoogleAuthenticationLabelInterface {
+    operation: string,
+    type: string
 };
 
 export interface AddJobToQueueLabelInterface {

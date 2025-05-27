@@ -1,22 +1,24 @@
+import { StringOrNull } from "../../utils/custom_types.js";
+
 export interface DeviceInterface {
     _id: string,
-    device_type?: string,
-    browser_info?: string,
-    ip_address?: string,
-    device_id?: string,
-    platform?: string,
-    device_name?: string,
+    device_type?: StringOrNull,
+    browser_info?: StringOrNull,
+    ip_address?: StringOrNull,
+    device_id?: StringOrNull,
+    platform?: StringOrNull,
+    device_name?: StringOrNull,
     login_time: Date,
-    user_id?: string | null,
+    user_id?: StringOrNull,
 }
 
 export interface GPRCDeviceInterface {
-    deviceType?: string,
-    browserInfo?: string,
-    ipAddress?: string,
-    deviceId?: string,
-    platform?: string,
-    deviceName?: string,
+    deviceType?: StringOrNull,
+    browserInfo?: StringOrNull,
+    ipAddress?: StringOrNull,
+    deviceId?: StringOrNull,
+    platform?: StringOrNull,
+    deviceName?: StringOrNull,
     loginTime?: Date | string,
-    userId?: string,
+    userId?: StringOrNull,
 };
