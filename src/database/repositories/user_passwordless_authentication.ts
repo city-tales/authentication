@@ -101,7 +101,7 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
             const isKeyInRedis = await cacheDB.get(redisKey);
             if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
                 const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
-                await userPasswordlessAuthenticationImpl.logUserDevice(deviceInfo, context, labels);
+                await utils.logUserDevice(deviceInfo, context, labels);
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.ALREADY_VERIFIED;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.success = true;

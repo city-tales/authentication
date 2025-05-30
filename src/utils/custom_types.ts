@@ -1,8 +1,3 @@
-export type MultipleQueryObject = {
-    query: string;
-    valuesArray: any[];
-}[];
-
 // String combinations
 export type StringOrNull = string | null;
 export type StringOrUndefined = string | undefined;
