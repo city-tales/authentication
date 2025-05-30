@@ -1,10 +1,13 @@
 enum DB {
     SAVE_IN_REDIS = 'saveInRedis',
     SAVE_IN_DB = 'saveInDB',
+    UPDATE_IN_DB = 'updateInDB',
     SEND_EMAIL_FOR_VERIFICATION = 'sendEmailForVerification'
 };
 
 enum QUEUE_DB {
+    SINGLE_CALL = 1,
+    LOW_ATTEMPT = 2,
     MAX_ATTEMPTS = 3,
     BACKOFF_EXPONENTIAL = 'exponential',
     STALLED_TIMEOUT_INTERVAL = 300000,
@@ -95,7 +98,8 @@ enum LOKI_LOGGER_LABELS {
 };
 
 enum JWT_CONFIG { 
-    VERY_SHORT_LIVED = 300,
+    VERY_SHORT_LIVED = 600,
+    SHORT_LIVED = 1200,
     EXPIRY = '1d',
     ALGORITHM = 'ES256'
 };
@@ -121,6 +125,7 @@ enum SIGNUP_MESSAGE {
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     CREATED = 'Account has been created successfully',
+    NOT_VERIFIED = 'Please verify email',
     EXISTING_USER = 'Account already exists',
     FAILED = 'Account creation failed',
     NO_CONTENT = 'Account do not exists',
@@ -146,20 +151,22 @@ enum LOGIN_MESSAGE {
 enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
     EMPTY = '',
     EMPTY_TOKEN = '',
+    NEW_USER = 'Account successfully created',
     NO_CONTENT = 'Email do not exists',
     UPDATED = 'User details updated',
     ALREADY_VERIFIED = 'User already verified',
     EXISTING_USER = 'Account Already exists',
     LINK_ALREADY_SENT = 'Magic Link is already sent to the email address, Kindly check Spam',
+    CREATED = 'Magic Link is sent to email',
     SUCCESS = 'Logging In',
     FAILED = 'Authentication Failed, Retry',
 };
-
 
 enum GOOGLE_AUTHENTICATION_MESSAGE {
     EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
+    NO_CONTENT = 'Email do not exists',
     CREATED = 'Account has been created successfully',
     EXISTING_USER = 'Account Already exists',
     SUCCESS = 'Logging In',

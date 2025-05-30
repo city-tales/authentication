@@ -1,19 +1,19 @@
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
-import { DeviceInterface } from "../interface/device_info.js";
-import { ContextInterface, GoogleAuthenticationLabelInterface } from "../interface/logger.js";
-import { GoogleAuthenticationResponse } from "../interface/response.js";
-import { GoogleAuthenticationInterface } from "../interface/user_google_authentication.js";
+import { DeviceType } from "../types/device_info.js";
+import { ContextType, GoogleAuthenticationLabelType } from "../types/logger.js";
+import { GoogleAuthenticationResponse } from "../types/response.js";
+import { GoogleAuthenticationAuthType, GoogleAuthenticationDataType, GoogleAuthenticationType } from "../types/user_google_authentication.js";
 import { userAuthenticationImpl } from "../models/user_google_authentication.js";
 
 interface UserGoogleAuthenticationRepositories {
-    checkIfUserExists(userInfo: GoogleAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse>;
-    authenticateUser(userInfo: GoogleAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse>
+    checkIfUserExists(userInfo: GoogleAuthenticationDataType, deviceInfo: DeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse>;
+    authenticateUser(userInfo: GoogleAuthenticationType, userDataInfo: GoogleAuthenticationDataType, authenticationInfo: GoogleAuthenticationAuthType, deviceInfo: DeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse>;
 }
 
 class UserGoogleAuthenticationRepositoriesImpl implements UserGoogleAuthenticationRepositories {
-    async checkIfUserExists(userInfo: GoogleAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse> {
+    async checkIfUserExists(userInfo: GoogleAuthenticationDataType, deviceInfo: DeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse> {
         let response = new GoogleAuthenticationResponse();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -40,24 +40,24 @@ class UserGoogleAuthenticationRepositoriesImpl implements UserGoogleAuthenticati
         return response;
     }
 
-    async authenticateUser(userInfo: GoogleAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse> {
+    async authenticateUser(userInfo: GoogleAuthenticationType, userDataInfo: GoogleAuthenticationDataType, authenticationInfo: GoogleAuthenticationAuthType, deviceInfo: DeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse> {
         let response = new GoogleAuthenticationResponse();
         let loggerDefaultParams = {};
         let logPayload = {
             labels,
             request: {
-                userInfo,
+                userDataInfo,
                 deviceInfo,
             },
         };
         
         try {
-            const checkIfUserExists: GoogleAuthenticationResponse = await this.checkIfUserExists(userInfo, deviceInfo, context, labels);
+            const checkIfUserExists: GoogleAuthenticationResponse = await this.checkIfUserExists(userDataInfo, deviceInfo, context, labels);
             if(checkIfUserExists.message === Constants.GOOGLE_AUTHENTICATION_MESSAGE.EXISTING_USER) {
                 response = checkIfUserExists;
             }   
             else {
-                const userResponse: GoogleAuthenticationResponse = await userAuthenticationImpl.authenticateUser(userInfo, deviceInfo, context, labels);
+                const userResponse: GoogleAuthenticationResponse = await userAuthenticationImpl.authenticateUser(userInfo, userDataInfo, authenticationInfo, deviceInfo, context, labels);
                 response = userResponse;
             }
         }

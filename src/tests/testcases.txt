@@ -1,0 +1,82 @@
+***************************************************************************************************
+
+Test:   -> User creates a new account for the first time using email.
+            Action: -> Account created successfully and email is sent for verification.
+                Result: -> Pass: Data saved properly and email sent.
+
+        -> User Logs in using correct email and password
+            Action: -> Please verify email  
+                Result: -> Pass: Please verify email  
+
+        -> User Logs in using correct email and incorrect password
+            Action: Incorrect Password
+                Result: -> Pass: Incorrect Password
+
+        -> User Login/Signup using Google Account
+            Action: Log in and is_google_verified changes to TRUE
+                Result: -> Pass: Logs In and is_google_verified = TRUE
+
+        -> User Login/Signup using MagicLink
+            Action: Log in and is_passwordless and is_email_verified changes to TRUE    
+                Result: -> Pass: Logs in and (is_passwordless, is_email_verified = true)
+
+***************************************************************************************************
+
+Test:   -> User creates a new account for the first time using email.
+            Action: -> Account created successfully and email is sent for verification.
+                Result: -> Pass: Data saved properly and email sent.
+
+        -> User Login/Signup using MagicLink
+            Action: Log in and is_passwordless and is_email_verified changes to TRUE    
+                Result: -> Pass: Logs in and (is_passwordless, is_email_verified = true)
+
+        -> User verifies the account    
+            Action: -> Account is already verified
+                Result: -> Pass: Email already verified
+
+        -> User Logs in using correct email and password
+            Action: -> User Logs in 
+                Result: -> Pass: Logging In
+
+        -> User Logs in using correct email and incorrect password
+            Action: Incorrect Password
+                Result: -> Pass: Incorrect Password
+
+***************************************************************************************************
+
+Test:   -> User creates a new account for the first time logs in using magicLink.
+            Action: -> Account created successfully and email is sent for one time login.
+                Result: -> Fail: Data not saved properly for device.
+
+        -> User Logs in using correct email and password
+            Action: -> Password not set
+                Result: -> Fail: Not Implemented
+                ** Result: -> Pass: "Wrong Password"
+
+        -> User Login/Signup using Google Account
+            Action: Log in and is_google_verified changes to TRUE
+                Result: -> Pass: Logs In and is_google_verified = TRUE
+
+        -> User SignUp using email
+            Action: Account already exists
+                Result: -> Pass: Account already exists
+
+***************************************************************************************************
+
+Test:   -> User creates a new account for the first time logs in using google sign in.
+            Action: -> Account created successfully and is_google_verified and is_email_verified is TRUE.
+                Result: -> Pass: Account Created and (is_google_verified, is_email_verified = true)
+
+        -> User Login/Signup using MagicLink
+            Action: Log in and is_passwordless and is_passwordless changes to TRUE    
+                Result: -> Pass: Logs in and is_passwordless = true
+
+        -> User Logs in using correct email and password
+            Action: -> Password not set
+                Result: -> Fail: Not Implemented ("2 UNKNOWN: The \"salt\" argument must be of type string or an instance of ArrayBuffer, Buffer, TypedArray, or DataView. Received null)
+                ** Result: -> Pass: "Wrong Password"
+
+        -> User Logs in using correct email and incorrect password
+            Action: Incorrect Password
+                Result: -> Fail: Not Implemented ("2 UNKNOWN: The \"salt\" argument must be of type string or an instance of ArrayBuffer, Buffer, TypedArray, or DataView. Received null)
+                ** Result: -> Pass: "Wrong Password"
