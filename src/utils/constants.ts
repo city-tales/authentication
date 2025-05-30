@@ -98,7 +98,8 @@ enum LOKI_LOGGER_LABELS {
 };
 
 enum JWT_CONFIG { 
-    VERY_SHORT_LIVED = 300,
+    VERY_SHORT_LIVED = 600,
+    SHORT_LIVED = 1200,
     EXPIRY = '1d',
     ALGORITHM = 'ES256'
 };

@@ -56,10 +56,10 @@ class UserLoginImpl implements UserLogin {
                 };
 
                 response.name = data.name;
-                response.token = helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation);
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !(data.is_email_verified || data.is_passwordless || data.is_google_verified);
+                response.token = helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation, !response.retryVerification);
 
                 if(helper.verifyPassword(userInfo.password, data.password, data.salt)) {
                     if(data.is_email_verified || data.is_passwordless || data.is_google_verified) {
