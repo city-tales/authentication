@@ -9,3 +9,7 @@ export const saveInRedisQueueEmployee = new Queue(Constants.DB.SAVE_IN_REDIS, {
 export const saveInDBQueueEmployee = new Queue(Constants.DB.SAVE_IN_DB, {
     connection: bullMQConnectionObject.connection
 });
+
+export const updateInDBQueueEmployee = new Queue(Constants.DB.UPDATE_IN_DB, {
+    connection: bullMQConnectionObject.connection
+})

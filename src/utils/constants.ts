@@ -1,10 +1,13 @@
 enum DB {
     SAVE_IN_REDIS = 'saveInRedis',
     SAVE_IN_DB = 'saveInDB',
+    UPDATE_IN_DB = 'updateInDB',
     SEND_EMAIL_FOR_VERIFICATION = 'sendEmailForVerification'
 };
 
 enum QUEUE_DB {
+    SINGLE_CALL = 1,
+    LOW_ATTEMPT = 2,
     MAX_ATTEMPTS = 3,
     BACKOFF_EXPONENTIAL = 'exponential',
     STALLED_TIMEOUT_INTERVAL = 300000,

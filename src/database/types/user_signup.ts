@@ -3,6 +3,7 @@ import { StringOrNull } from "../../utils/custom_types.js";
 export type UserSignUpType = {
     _id: string,
 }
+
 export type UserDataSignUpType = {
     _id: string,
     email: string,
