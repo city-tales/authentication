@@ -1,20 +1,20 @@
 import { logger } from "../config/loki.js";
-import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { ContextInterface, EmailLoginLabelInterface } from "../database/interface/logger.js";
-import { LoginResponse } from "../database/interface/response.js";
-import { GRPCUserLoginInterface, UserLoginInterface } from "../database/interface/user_login.js";
+import { DeviceType, GPRCDeviceType } from "../database/types/device_info.js";
+import { ContextType, EmailLoginLabelType } from "../database/types/logger.js";
+import { LoginResponse } from "../database/types/response.js";
+import { GRPCUserLoginType, UserLoginType } from "../database/types/user_login.js";
 import { userLoginRepositoryImpl } from "../database/repositories/user_login.js";
 import { Constants } from "../utils/constants.js";
 import { helper } from "../utils/helper.js";
 
 interface UserLoginController {
-    mapUserLoginSchema(userInfo: GRPCUserLoginInterface): UserLoginInterface;
-    loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
+    mapUserLoginSchema(userInfo: GRPCUserLoginType): UserLoginType;
+    loginUser(userInfo: GRPCUserLoginType, deviceInfo: GPRCDeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse>;
 }
 
 class UserLoginControllerImpl implements UserLoginController {
-    mapUserLoginSchema(userInfo: GRPCUserLoginInterface): UserLoginInterface {
-        const sanitisedUserLoginInfo: GRPCUserLoginInterface = helper.convertToType<GRPCUserLoginInterface>(
+    mapUserLoginSchema(userInfo: GRPCUserLoginType): UserLoginType {
+        const sanitisedUserLoginInfo: GRPCUserLoginType = helper.convertToType<GRPCUserLoginType>(
             helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
@@ -24,9 +24,9 @@ class UserLoginControllerImpl implements UserLoginController {
         }
     }
 
-    async loginUser(userInfo: GRPCUserLoginInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
-        const userLoginSchemaInfo: UserLoginInterface = this.mapUserLoginSchema(userInfo);
-        const deviceLoginSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
+    async loginUser(userInfo: GRPCUserLoginType, deviceInfo: GPRCDeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse> {
+        const userLoginSchemaInfo: UserLoginType = this.mapUserLoginSchema(userInfo);
+        const deviceLoginSchemaInfo: DeviceType = helper.mapDeviceSchema(deviceInfo);
 
         let response = new LoginResponse();
         let loggerDefaultParams = {};
@@ -41,6 +41,9 @@ class UserLoginControllerImpl implements UserLoginController {
         try {
             const isKeyInRedis: LoginResponse = await userLoginRepositoryImpl.checkUserInRedis(userLoginSchemaInfo, context, labels);
             if(helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis.token) && isKeyInRedis.statusCode === Constants.STATUS_CODES.OK) {
+                response = isKeyInRedis;
+            }
+            else if(isKeyInRedis.message === Constants.LOGIN_MESSAGE.PASSWORD_DO_NOT_MATCH) {
                 response = isKeyInRedis;
             }
             else {

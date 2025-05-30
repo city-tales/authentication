@@ -1,45 +1,69 @@
 import { uuidv4 } from "../config/imports.js";
 import { logger } from "../config/loki.js";
-import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
-import { ContextInterface, GoogleAuthenticationLabelInterface } from "../database/interface/logger.js";
-import { GoogleAuthenticationResponse } from "../database/interface/response.js";
-import { GoogleAuthenticationInterface, GPRCGoogleAuthenticationInterface } from "../database/interface/user_google_authentication.js";
+import { DeviceType, GPRCDeviceType } from "../database/types/device_info.js";
+import { ContextType, GoogleAuthenticationLabelType } from "../database/types/logger.js";
+import { GoogleAuthenticationResponse } from "../database/types/response.js";
+import { GoogleAuthenticationAuthType, GoogleAuthenticationDataType, GoogleAuthenticationType, GPRCGoogleAuthenticationAuthSchemaType } from "../database/types/user_google_authentication.js";
 import { userGoogleAuthenticationRepositories } from "../database/repositories/user_google_authentication.js";
 import { Constants } from "../utils/constants.js";
 import { helper } from "../utils/helper.js";
 
 interface GoogleAuthenticationController {
-    mapUserAuthenticationSchema(userInfo: GPRCGoogleAuthenticationInterface): GoogleAuthenticationInterface;
-    authenticateUser(userInfo: GPRCGoogleAuthenticationInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse>
+    mapGoogleUserAuthenticationSchema(): GoogleAuthenticationType;
+    mapGoogleUserDataAuthenticationSchema(userInfo: GPRCGoogleAuthenticationAuthSchemaType, userId: string): GoogleAuthenticationDataType;
+    mapGoogleUserAuthDataAuthenticationSchema(userInfo: GPRCGoogleAuthenticationAuthSchemaType, userId: string): GoogleAuthenticationAuthType;
+    authenticateUser(userInfo: GPRCGoogleAuthenticationAuthSchemaType, deviceInfo: GPRCDeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse>
 }
 
 class GoogleAuthenticationControllerImpl implements GoogleAuthenticationController {
-    mapUserAuthenticationSchema(userInfo: GPRCGoogleAuthenticationInterface): GoogleAuthenticationInterface {
+    mapGoogleUserAuthenticationSchema(): GoogleAuthenticationType {
+        return {
+            _id: uuidv4(),
+        };
+    }
+
+    mapGoogleUserDataAuthenticationSchema(userInfo: GPRCGoogleAuthenticationAuthSchemaType, userId: string): GoogleAuthenticationDataType {
         return {
             _id: uuidv4(),
             email: userInfo.email,
             name: userInfo.name,
             username: helper.generateUniqueUserName(userInfo),
             profile_picture: userInfo.profilePicture,
+            user_id: userId,
         }
     }
 
-    async authenticateUser(userInfo: GPRCGoogleAuthenticationInterface, deviceInfo: GPRCDeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse> {
-        const userAuthenticationSchemaInfo: GoogleAuthenticationInterface = this.mapUserAuthenticationSchema(userInfo);
-        const deviceLoginSchemaInfo: DeviceInterface = helper.mapDeviceSchema(deviceInfo);
+    mapGoogleUserAuthDataAuthenticationSchema(userInfo: GPRCGoogleAuthenticationAuthSchemaType, userId: string): GoogleAuthenticationAuthType {
+        return {
+            _id: uuidv4(),
+            is_email_verified: true,
+            is_google_verified: true,
+            is_passwordless: false,
+            is_mfa_enabled: false,
+            password: null,
+            salt: null,
+            user_id: userId,
+        }
+    }
+
+    async authenticateUser(userInfo: GPRCGoogleAuthenticationAuthSchemaType, deviceInfo: GPRCDeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse> {
+        const userAuthenticationSchemaInfo: GoogleAuthenticationType = this.mapGoogleUserAuthenticationSchema();
+        const userDataAuthenticationSchemaInfo: GoogleAuthenticationDataType = this.mapGoogleUserDataAuthenticationSchema(userInfo, userAuthenticationSchemaInfo._id);
+        const userAuthAuthenticationSchemaInfo: GoogleAuthenticationAuthType = this.mapGoogleUserAuthDataAuthenticationSchema(userInfo, userAuthenticationSchemaInfo._id);
+        const deviceLoginSchemaInfo: DeviceType = helper.mapDeviceSchema(deviceInfo, userAuthenticationSchemaInfo._id);
 
         let response = new GoogleAuthenticationResponse();
         let loggerDefaultParams = {};
         let logPayload = {
             labels,
             request: {
-                userAuthenticationSchemaInfo,
+                userDataAuthenticationSchemaInfo,
                 deviceLoginSchemaInfo,
             },
         };
 
         try {
-            const userResponse = await userGoogleAuthenticationRepositories.authenticateUser(userAuthenticationSchemaInfo, deviceLoginSchemaInfo, context, labels);
+            const userResponse = await userGoogleAuthenticationRepositories.authenticateUser(userAuthenticationSchemaInfo, userDataAuthenticationSchemaInfo, userAuthAuthenticationSchemaInfo, deviceLoginSchemaInfo, context, labels);
             response = userResponse;
         }
         catch (error) {

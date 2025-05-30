@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { userEmailVerificationControllerImpl } from "../../controllers/email_verification.js";
-import { EmailVerificationLabelInterface } from "../../database/interface/logger.js";
-import { EmailVerificationResponse } from "../../database/interface/response.js";
+import { EmailVerificationLabelType } from "../../database/types/logger.js";
+import { EmailVerificationResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -13,7 +13,7 @@ const emailVerification = async (call, callback) => {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
         source: source,
     };
-    const labels: EmailVerificationLabelInterface = {
+    const labels: EmailVerificationLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.EMAIL_VERIFICATION,
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
         source: context.source,

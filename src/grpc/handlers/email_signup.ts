@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { userSignUpControllerImpl } from "../../controllers/email_signup.js";
-import { EmailSignUpLabelInterface } from "../../database/interface/logger.js";
-import { SignUpResponse } from "../../database/interface/response.js";
+import { EmailSignUpLabelType } from "../../database/types/logger.js";
+import { SignUpResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -10,7 +10,7 @@ const emailSignUp = async (call, callback) => {
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: EmailSignUpLabelInterface = {
+    const labels: EmailSignUpLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
     };

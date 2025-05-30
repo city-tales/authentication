@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { passwordlessAuthenticationController } from "../../controllers/passwordless_authentication.js";
-import { PasswordlessAuthenticationLabelInterface } from "../../database/interface/logger.js";
-import { PasswordlessAuthenticationResponse } from "../../database/interface/response.js";
+import { PasswordlessAuthenticationLabelType } from "../../database/types/logger.js";
+import { PasswordlessAuthenticationResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -10,7 +10,7 @@ const passwordlessAuthentication = async (call, callback) => {
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: PasswordlessAuthenticationLabelInterface = {
+    const labels: PasswordlessAuthenticationLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.PASSWORDLESS,
         type: Constants.LOKI_LOGGER_LABELS.MAGIC_LINK,
     };
