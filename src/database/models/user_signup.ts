@@ -1,27 +1,30 @@
-import { SignUpResponse } from "../interface/response.js";
+import { SignUpResponse } from "../types/response.js";
 import { helper } from "../../utils/helper.js";
 import { Constants } from "../../utils/constants.js";
-import { UserSignUpInterface } from "../interface/user_signup.js";
-import { DeviceInterface } from "../interface/device_info.js";
+import { AuthDataSignUpType, UserDataSignUpType, UserSignUpType } from "../types/user_signup.js";
+import { DeviceType } from "../types/device_info.js";
 import { queueEmployee } from "../../utils/workers.js";
-import { ContextInterface, EmailSignUpLabelInterface } from "../interface/logger.js";
+import { ContextType, EmailSignUpLabelType } from "../types/logger.js";
 import { logger } from "../../config/loki.js";
-import { MultipleQueryObject } from "../../utils/custom_types.js";
+import { utils } from "../../utils/utils.js";
+import { MultipleQueryObject } from "../../utils/types.js";
 
 interface UserSignUp {
-    checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse>;
-    createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse>;
+    checkIfUserExists(values, userInfo: UserDataSignUpType, redisKey: string, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse>;
+    createUser(userInfo: UserSignUpType, userDataInfo: UserDataSignUpType, authDataSchemaInfo: AuthDataSignUpType, deviceInfo: DeviceType, redisKey: string, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse>;
 }
 
 class UserSignUpImpl implements UserSignUp {
-    async checkIfUserExists(values, userInfo: UserSignUpInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
-        const userTableName = Constants.TABLES.USER_TABLE;
+    async checkIfUserExists(values, userInfo: UserDataSignUpType, redisKey: string, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse> {
+        const userDataTableName = Constants.TABLES.USER_DATA_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const query = `SELECT users._id, users.name, users.username, users.password, auth.is_email_verified, auth.salt FROM ${userTableName}
-                        JOIN ${authTableName} ON users._id = auth.user_id WHERE
-                        (users.email = $1 OR $1 IS NULL) AND
-                        (users.primary_country_code = $2 OR $2 IS NULL) AND
-                        (users.phone_number = $3 OR $3 IS NULL) LIMIT 1`;
+        const query = `SELECT user_data.user_id as _id, user_data.name, user_data.username, auth.password, 
+                        auth.is_email_verified, auth.is_passwordless, auth.is_google_verified, 
+                        auth.salt FROM ${userDataTableName} user_data
+                        JOIN ${authTableName} ON user_data.user_id = auth.user_id WHERE
+                        (user_data.email = $1) OR
+                        (user_data.primary_country_code = $2 OR $2 IS NULL) AND
+                        (user_data.phone_number = $3) LIMIT 1`;
 
         const valuesArray = [
             values.email ?? null,
@@ -47,10 +50,11 @@ class UserSignUpImpl implements UserSignUp {
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
                 const data = queryResponse.rows[0];
-                if (!data.is_email_verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation);
-
                 response.statusCode = Constants.STATUS_CODES.OK;
-                response.verified = data.is_email_verified;
+                response.verified = data.is_email_verified || data.is_passwordless || data.is_google_verified;
+
+                if (response.verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation);
+                else throw new Error(Constants.SIGNUP_MESSAGE.NOT_VERIFIED);
 
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -58,7 +62,7 @@ class UserSignUpImpl implements UserSignUp {
                     username: data.username,
                     password: data.password,
                     salt: data.salt,
-                    isEmailVerified: data.is_email_verified,
+                    isEmailVerified: response.verified,
                 };
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,

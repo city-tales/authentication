@@ -2,20 +2,20 @@ import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
-import { RedisEmailKeySerialisation } from "../../utils/interface.js";
-import { DeviceInterface } from "../interface/device_info.js";
-import { ContextInterface, EmailLoginLabelInterface } from "../interface/logger.js";
-import { LoginResponse } from "../interface/response.js";
-import { UserLoginInterface } from "../interface/user_login.js";
+import { RedisEmailKeySerialisation } from "../../utils/types.js";
+import { DeviceType } from "../types/device_info.js";
+import { ContextType, EmailLoginLabelType } from "../types/logger.js";
+import { LoginResponse } from "../types/response.js";
+import { UserLoginType } from "../types/user_login.js";
 import { userLoginImpl } from "../models/user_login.js";
 
 interface UserLoginRepository {
-    checkUserInRedis(userInfo: UserLoginInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
-    loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse>;
+    checkUserInRedis(userInfo: UserLoginType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse>;
+    loginUser(userInfo: UserLoginType, deviceInfo: DeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse>;
 }
 
 class UserLoginRepositoryImpl implements UserLoginRepository {
-    async checkUserInRedis(userInfo: UserLoginInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+    async checkUserInRedis(userInfo: UserLoginType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse> {
         let response = new LoginResponse();
 
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
@@ -74,7 +74,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         return response;
     }
 
-    async loginUser(userInfo: UserLoginInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: EmailLoginLabelInterface): Promise<LoginResponse> {
+    async loginUser(userInfo: UserLoginType, deviceInfo: DeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse> {
         let response = new LoginResponse();
         let loggerDefaultParams = {};
         let logPayload = {

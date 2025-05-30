@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { googleAuthenticationController } from "../../controllers/google_authentication.js";
-import { GoogleAuthenticationLabelInterface } from "../../database/interface/logger.js";
-import { GoogleAuthenticationResponse } from "../../database/interface/response.js";
+import { GoogleAuthenticationLabelType } from "../../database/types/logger.js";
+import { GoogleAuthenticationResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -10,7 +10,7 @@ const googleAuthentication = async (call, callback) => {
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: GoogleAuthenticationLabelInterface = {
+    const labels: GoogleAuthenticationLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.GOOGLE,
         type: Constants.LOKI_LOGGER_LABELS.GOOGLE_AUTHENTICATION,
     };

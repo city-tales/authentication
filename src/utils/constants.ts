@@ -124,6 +124,7 @@ enum SIGNUP_MESSAGE {
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
     CREATED = 'Account has been created successfully',
+    NOT_VERIFIED = 'Please verify email',
     EXISTING_USER = 'Account already exists',
     FAILED = 'Account creation failed',
     NO_CONTENT = 'Account do not exists',
@@ -149,20 +150,22 @@ enum LOGIN_MESSAGE {
 enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
     EMPTY = '',
     EMPTY_TOKEN = '',
+    NEW_USER = 'Account successfully created',
     NO_CONTENT = 'Email do not exists',
     UPDATED = 'User details updated',
     ALREADY_VERIFIED = 'User already verified',
     EXISTING_USER = 'Account Already exists',
     LINK_ALREADY_SENT = 'Magic Link is already sent to the email address, Kindly check Spam',
+    CREATED = 'Magic Link is sent to email',
     SUCCESS = 'Logging In',
     FAILED = 'Authentication Failed, Retry',
 };
-
 
 enum GOOGLE_AUTHENTICATION_MESSAGE {
     EMPTY = '',
     EMPTY_TOKEN = '',
     PROCESSING = 'Processing',
+    NO_CONTENT = 'Email do not exists',
     CREATED = 'Account has been created successfully',
     EXISTING_USER = 'Account Already exists',
     SUCCESS = 'Logging In',

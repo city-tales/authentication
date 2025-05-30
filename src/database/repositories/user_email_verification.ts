@@ -2,17 +2,17 @@ import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
-import { DecryptedAuthTokenInterface } from "../../utils/interface.js";
-import { ContextInterface, EmailVerificationLabelInterface } from "../interface/logger.js";
-import { EmailVerificationResponse } from "../interface/response.js";
+import { DecryptedAuthTokenType } from "../../utils/types.js";
+import { ContextType, EmailVerificationLabelType } from "../types/logger.js";
+import { EmailVerificationResponse } from "../types/response.js";
 import { userEmailVerificationImpl } from "../models/user_email_verification.js";
 
 interface UserEmailVerificationRepositories {
-    verifyEmail(decryptedAuthToken: DecryptedAuthTokenInterface, context: ContextInterface, labels: EmailVerificationLabelInterface): Promise<EmailVerificationResponse>
+    verifyEmail(decryptedAuthToken: DecryptedAuthTokenType, context: ContextType, labels: EmailVerificationLabelType): Promise<EmailVerificationResponse>
 }
 
 class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepositories {
-    async verifyEmail(decryptedAuthToken: DecryptedAuthTokenInterface, context: ContextInterface, labels: EmailVerificationLabelInterface): Promise<EmailVerificationResponse> {
+    async verifyEmail(decryptedAuthToken: DecryptedAuthTokenType, context: ContextType, labels: EmailVerificationLabelType): Promise<EmailVerificationResponse> {
         let response = new EmailVerificationResponse();
         let loggerDefaultParams = {};
         let logPayload = {

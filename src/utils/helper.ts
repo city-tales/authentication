@@ -1,39 +1,38 @@
 import { pool } from "../config/postgres.js";
 import { cacheDB } from "../config/redis.js";
-import { DeviceInterface, GPRCDeviceInterface } from "../database/interface/device_info.js";
+import { DeviceType, GPRCDeviceType } from "../database/types/device_info.js";
 import { Constants } from "./constants.js";
-import { DecryptedAuthTokenInterface, HashedPasswordInterface, PasswordlessAuthenticationTokenInterface, RedisEmailKeySerialisation } from "./interface.js";
-import { BooleanOrNullOrUndefined, MultipleQueryObject, NumberOrNull, NumberOrNullOrUndefined, StringOrNull, StringOrNullOrUndefined, StringOrUndefined } from "./custom_types.js";
-import { ContextInterface } from "../database/interface/logger.js";
+import { DecryptedAuthTokenType, HashedPasswordType, MultipleQueryObject, PasswordlessAuthenticationTokenType, RedisEmailKeySerialisation } from "./types.js";
+import { BooleanOrNullOrUndefined, NumberOrNull, NumberOrNullOrUndefined, StringOrNull, StringOrNullOrUndefined, StringOrUndefined } from "./custom_types.js";
+import { ContextType } from "../database/types/logger.js";
 import { logger } from "../config/loki.js";
-import { AuthVerificationInterface } from "../database/interface/auth_verification.js";
-import { RedisResponse } from "../database/interface/response.js";
-import { Utils } from "./utils.js";
+import { AuthVerificationType } from "../database/types/auth_verification.js";
+import { RedisResponse } from "../database/types/response.js";
 import { crypto, adjectives, faker, jwt, nouns, uniqueUsernameGenerator, uuidv4 } from "../config/imports.js";
 import { jwtPublicKey, privateKey } from "../config/config.js";
+import { utils } from "./utils.js";
 
 interface Helper {
     createQueryColumn(columns: unknown): unknown;
     formatQueryValue(value: unknown): string;
     createQueryValues(values: unknown): unknown;
-    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface;
-    executeQueryAsyncWithoutLock(context: ContextInterface, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
-    executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
+    executeQueryAsyncWithoutLock(context: ContextType, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
+    executeMultipleQueryAsyncWithoutLock(context: ContextType, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
     isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
     isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
-    generateHashPassword(password: string): HashedPasswordInterface;
+    generateHashPassword(password: string): HashedPasswordType;
     verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
     generateUserAuthToken(_id: string, username: string, email: string, label: string): string;
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string;
-    decryptAuthToken(token: string): DecryptedAuthTokenInterface;
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string;
+    decryptAuthToken(token: string): DecryptedAuthTokenType;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
     convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
     prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
     serialiseRedisKeyValues(keyValuePairs: Object): string;
     parseRedisValueToObject(value: string);
-    setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void>;
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId: string): DeviceInterface;
+    setRedis(context: ContextType, labels, key: string, value: string, timeout?: number): Promise<void>;
+    mapDeviceSchema(deviceInfo: GPRCDeviceType, userId: string): DeviceType;
     parseBooleanString(truthValue: StringOrNullOrUndefined): boolean;
     isNotEmpty(value: string): boolean;
     isValidNumeric(value: number): boolean;
@@ -78,20 +77,7 @@ export class HelperImpl implements Helper {
         return value;
     }
 
-    createAuthSchema(userId: string, googleEmail?: StringOrNullOrUndefined, generatedSalt?: StringOrNullOrUndefined, isEmailVerified?: BooleanOrNullOrUndefined, isPasswordless?: BooleanOrNullOrUndefined): AuthVerificationInterface {
-        return {
-            _id: uuidv4(),
-            google_email: googleEmail ?? null,
-            is_email_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isEmailVerified) ? isEmailVerified : false, Constants.TYPE_SWITCH.BOOLEAN),
-            is_google_verified: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(googleEmail) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
-            is_passwordless: this.convertToType<boolean>(this.isGenericNeitherNullNorUndefined(isPasswordless) ? true : false, Constants.TYPE_SWITCH.BOOLEAN),
-            is_mfa_enabled: false,
-            salt: this.isEitherNullOrUndefinedOrEmpty(generatedSalt) ? null : generatedSalt,
-            user_id: userId,
-        };
-    }
-
-    async executeQueryAsyncWithoutLock(context: ContextInterface, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
+    async executeQueryAsyncWithoutLock(context: ContextType, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -206,8 +192,12 @@ export class HelperImpl implements Helper {
     }
 
     verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean {
-        const hashToCompare = crypto.scryptSync(inputPassword, storedSalt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
-        return hashToCompare === storedHash;
+        try {
+            const hashToCompare = crypto.scryptSync(inputPassword, storedSalt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
+            return hashToCompare === storedHash;
+        }
+        catch (error) {}
+        return false;
     }
 
     generateUserAuthToken(_id: string, username: string, email: string, label: string): string {
@@ -238,17 +228,15 @@ export class HelperImpl implements Helper {
             deviceType: sanitisedDeviceInfo.deviceType,
             browserInfo: sanitisedDeviceInfo.browserInfo,
             ipAddress: sanitisedDeviceInfo.ipAddress,
-            deviceId: sanitisedDeviceInfo.deviceId,
             platform: sanitisedDeviceInfo.platform,
             deviceName: sanitisedDeviceInfo.deviceName,
-            loginTime: sanitisedDeviceInfo.loginTime || Utils.CURRENT_TIME,
-            userId: sanitisedDeviceInfo?.userId ?? null,
+            loginTime: sanitisedDeviceInfo.loginTime || utils.CURRENT_TIME,
             source: label,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
             algorithm: Constants.JWT_CONFIG.ALGORITHM,
-            expiresIn: Constants.JWT_CONFIG.VERY_SHORT_LIVED
+            expiresIn: Constants.JWT_CONFIG.EXPIRY
         });
 
         return token;
@@ -357,10 +345,9 @@ export class HelperImpl implements Helper {
             device_type: sanitisedDeviceInfo.deviceType,
             browser_info: sanitisedDeviceInfo.browserInfo,
             ip_address: sanitisedDeviceInfo.ipAddress,
-            device_id: sanitisedDeviceInfo.deviceId,
             platform: sanitisedDeviceInfo.platform,
             device_name: sanitisedDeviceInfo.deviceName,
-            login_time: new Date(sanitisedDeviceInfo?.loginTime || Utils.CURRENT_TIME),
+            login_time: sanitisedDeviceInfo?.loginTime || utils.CURRENT_TIME(),
             user_id: userId ?? null,
         };
     }
