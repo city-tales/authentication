@@ -55,6 +55,8 @@ interface Helper {
     generateContext();
     generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
     generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
+    serializeError(error);
+    serializeErrorStrict(error, options);
     logErrorStack(logPayload: any, error: any);
     logResponse(logPayload: any, response);
 };
@@ -110,7 +112,7 @@ export class HelperImpl implements Helper {
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...queryConfig };
-            logPayload = helper.logResponse(logPayload, response);
+            logPayload = this.logResponse(logPayload, response);
             logger.info({ ...logPayload });
 
             return response;
@@ -120,7 +122,7 @@ export class HelperImpl implements Helper {
 
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = this.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new Error(error.message);
@@ -130,7 +132,7 @@ export class HelperImpl implements Helper {
         }
     }
 
-    async executeMultipleQueryAsyncWithoutLock(context: ContextInterface, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
+    async executeMultipleQueryAsyncWithoutLock(context: ContextType, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         const response: string[] = [];
         let loggerDefaultParams = {};
@@ -159,7 +161,7 @@ export class HelperImpl implements Helper {
             loggerDefaultParams = this.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...queries };
-            logPayload = helper.logResponse(logPayload, response);
+            logPayload = this.logResponse(logPayload, response);
             logger.info({ ...logPayload });
 
             return response;
@@ -169,7 +171,7 @@ export class HelperImpl implements Helper {
 
             loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.POSTGRESQL_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = this.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new Error(error.message);
@@ -194,7 +196,7 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateHashPassword(password: string): HashedPasswordInterface {
+    generateHashPassword(password: string): HashedPasswordType {
         const salt = crypto.randomBytes(Constants.CRYPTO_CONFIG.BYTES_16).toString(Constants.CRYPTO_CONFIG.HEX);
         const hashedPassword = crypto.scryptSync(password, salt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
         return { 
@@ -224,8 +226,8 @@ export class HelperImpl implements Helper {
         return token;
     }
 
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenInterface, deviceInfo: GPRCDeviceInterface, label: string): string {
-        const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
+    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string {
+        const sanitisedDeviceInfo: GPRCDeviceType = helper.convertToType<GPRCDeviceType>(
             helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
@@ -252,7 +254,7 @@ export class HelperImpl implements Helper {
         return token;
     }
 
-    decryptAuthToken(token: string): DecryptedAuthTokenInterface {
+    decryptAuthToken(token: string): DecryptedAuthTokenType {
         try {
             const payload = jwt.verify(token, jwtPublicKey, {
                 algorithms: Constants.JWT_CONFIG.ALGORITHM
@@ -313,7 +315,7 @@ export class HelperImpl implements Helper {
         return deSerialisedObject;
     }
 
-    async setRedis(context: ContextInterface, labels, key: string, value: string, timeout?: number): Promise<void> {
+    async setRedis(context: ContextType, labels, key: string, value: string, timeout?: number): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS, Constants.TYPE_SWITCH.BOOLEAN);
         if (switchOffForDev) return;
 
@@ -338,15 +340,15 @@ export class HelperImpl implements Helper {
         catch (error) {
             loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = this.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new RedisResponse(error);
         }
     }
 
-    mapDeviceSchema(deviceInfo: GPRCDeviceInterface, userId?: StringOrNull): DeviceInterface {
-        const sanitisedDeviceInfo: GPRCDeviceInterface = helper.convertToType<GPRCDeviceInterface>(
+    mapDeviceSchema(deviceInfo: GPRCDeviceType, userId?: StringOrNull): DeviceType {
+        const sanitisedDeviceInfo: GPRCDeviceType = helper.convertToType<GPRCDeviceType>(
             helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
@@ -518,10 +520,144 @@ export class HelperImpl implements Helper {
         };
     }
 
+    /**
+     * Helper function to serialize error objects with only defined and non-empty properties
+     * @param {Error} error - The error object to serialize
+     * @returns {Object} - Serialized error object with only meaningful properties
+     */
+    serializeError(error) {
+        if (!error) return {};
+        
+        const serialized = {};
+        const standardProps = [
+            'name', 'message', 'stack', 'code', 'statusCode', 
+            'status', 'errno', 'syscall', 'path', 'cause'
+        ];
+        
+        const isValidValue = (value) => {
+            if (Array.isArray(value) && value.length === 0) return false;
+            if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+            if (this.isGenericNeitherNullNorUndefinedNorInvalid(value)) return false;
+            return true;
+        };
+        
+        standardProps.forEach(prop => {
+            if (prop in error && isValidValue(error[prop])) {
+                try {
+                    serialized[prop] = error[prop];
+                } catch (e) {
+                    // Skip properties that can't be accessed
+                }
+            }
+        });
+        
+        for (const key in error) {
+            if (error.hasOwnProperty(key) && 
+                !(key in serialized) && 
+                isValidValue(error[key])) {
+                try {
+                    serialized[key] = error[key];
+                } catch (e) {
+                    // Skip properties that can't be serialized
+                }
+            }
+        }
+        
+        const nonEnumerableProps = Object.getOwnPropertyNames(error);
+        nonEnumerableProps.forEach(prop => {
+            if (!(prop in serialized) && 
+                isValidValue(error[prop]) && 
+                typeof error[prop] !== 'function') {
+                try {
+                    serialized[prop] = error[prop];
+                } catch (e) {
+                    // Skip properties that can't be accessed
+                }
+            }
+        });
+        
+        return serialized;
+    }
+
+    /**
+     * Alternative version with more strict filtering options
+     * @param {Error} error - The error object to serialize
+     * @param {Object} options - Configuration options
+     * @returns {Object} - Serialized error object
+     */
+    serializeErrorStrict(error, options = {}) {
+        if (!error) return {};
+        
+        const {
+            includeStack = true,
+            includeEmptyStrings = false,
+            includeZeroValues = true,
+            includeFunctions = false,
+            customProps = []
+        }: any = options;
+        
+        const serialized = {};
+        
+        // Standard properties to always check
+        const standardProps = [
+            'name', 'message', 
+            ...(includeStack ? ['stack'] : []),
+            'code', 'statusCode', 'status', 'errno', 
+            'syscall', 'path', 'cause', ...customProps
+        ];
+        
+        // More granular validation
+        const isValidValue = (value, key) => {
+            if (value === null || value === undefined) return false;
+            
+            if (typeof value === 'string') {
+                if (!includeEmptyStrings && value.trim() === '') return false;
+                return true;
+            }
+            
+            if (typeof value === 'number') {
+                if (!includeZeroValues && value === 0) return false;
+                return !isNaN(value);
+            }
+            
+            if (typeof value === 'function' && !includeFunctions) return false;
+            
+            if (typeof value === 'object') {
+                if (Array.isArray(value)) return value.length > 0;
+                return Object.keys(value).length > 0;
+            }
+            
+            return true;
+        };
+        
+        // Process all possible properties
+        const allProps = [
+            ...standardProps,
+            ...Object.keys(error),
+            ...Object.getOwnPropertyNames(error)
+        ];
+        
+        // Remove duplicates
+        const uniqueProps = [...new Set(allProps)];
+        
+        uniqueProps.forEach(prop => {
+            if (prop in error && isValidValue(error[prop], prop)) {
+                try {
+                    serialized[prop] = error[prop];
+                } catch (e) {
+                    // Skip properties that can't be accessed
+                }
+            }
+        });
+        
+        return serialized;
+    }
+
     logErrorStack(logPayload: any, error: any, customMessage?: string) {
+        const errorObj = this.serializeError(error);
         const cloneLogPayload = {
             ...logPayload,
-            error: { ...(logPayload.error || {}) }
+            error: { ...(logPayload.error || errorObj || {}) }
         };
 
         ['message', 'details', 'code', 'statusCode', 'stack', 'name', 'token', 'retryVerification', 'success', 'verified'].forEach((key) => {
