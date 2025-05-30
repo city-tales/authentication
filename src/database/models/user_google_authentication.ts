@@ -36,7 +36,6 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
 
             if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
-
                 deviceInfo.user_id = data._id;
 
                 await utils.logUserDevice(deviceInfo, context, labels);
@@ -73,27 +72,21 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
         return response;
     }
 
-    async authenticateUser(userInfo: GoogleAuthenticationInterface, deviceInfo: DeviceInterface, context: ContextInterface, labels: GoogleAuthenticationLabelInterface): Promise<GoogleAuthenticationResponse> {
+    async authenticateUser(userInfo: GoogleAuthenticationType, userDataInfo: GoogleAuthenticationDataType, authenticationInfo: GoogleAuthenticationAuthType, deviceInfo: DeviceType, context: ContextType, labels: GoogleAuthenticationLabelType): Promise<GoogleAuthenticationResponse> {
         let response = new GoogleAuthenticationResponse();
-        const _id = uuidv4();
-        deviceInfo.user_id = _id;
 
         const userTableName = Constants.TABLES.USER_TABLE;
         const userDataTableName = Constants.TABLES.USER_DATA_TABLE;
-        const deviceTableName = Constants.TABLES.DEVICE_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
 
         const userQuery = `INSERT INTO ${userTableName} VALUES ($1)`;
-        const usersValuesArray = [ _id ];
+        const usersValuesArray = Object.values(userInfo);
 
         const userDataQuery = `INSERT INTO ${userDataTableName} (_id, email, name, username, profile_picture, user_id) VALUES ($1, $2, $3, $4, $5, $6)`;
-        const userDeviceValuesArray = [...Object.values(userInfo), _id];
-
-        const deviceDataQuery = `INSERT INTO ${deviceTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
-        const deviceValuesArray = Object.values(deviceInfo);
+        const userDeviceValuesArray = Object.values(userDataInfo);
         
         const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
-        const authValuesArray = Object.values(helper.createAuthSchema(_id, userInfo.email));
+        const authValuesArray = Object.values(authenticationInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [
             {
@@ -120,10 +113,10 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
             const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
 
             if (queryResponse.length === usersAuthDataQuery.length) {
-                response.token = helper.generateUserAuthToken(_id, userInfo.username, userInfo.email, labels.operation);
+                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation);
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
-            
+
                 await utils.logUserDevice(deviceInfo, context, labels);
             }
             else {

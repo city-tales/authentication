@@ -84,26 +84,28 @@ class UserSignUpImpl implements UserSignUp {
         return response;
     }
 
-    async createUser(userInfo: UserSignUpInterface, deviceInfo: DeviceInterface, redisKey: string, context: ContextInterface, labels: EmailSignUpLabelInterface): Promise<SignUpResponse> {
+    async createUser(userInfo: UserSignUpType, userDataInfo: UserDataSignUpType, authDataSchemaInfo: AuthDataSignUpType, deviceInfo: DeviceType, redisKey: string, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse> {
         const usersTableName = Constants.TABLES.USER_TABLE;
-        const deviceTableName = Constants.TABLES.DEVICE_TABLE;
+        const usersDataTableName = Constants.TABLES.USER_DATA_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
-        const { salt, hashedPassword } = helper.generateHashPassword(userInfo.password);
-        userInfo.password = hashedPassword;
 
-        const usersDataQuery = `INSERT INTO ${usersTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+        const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1)`;
         const usersValuesArray = Object.values(userInfo);
 
-        const deviceDataQuery = `INSERT INTO ${deviceTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
-        const deviceValuesArray = Object.values(deviceInfo);
+        const usersDataQuery = `INSERT INTO ${usersDataTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+        const usersDataValuesArray = Object.values(userDataInfo);
 
         const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
-        const authValuesArray = Object.values(helper.createAuthSchema(userInfo._id, null, salt));
+        const authValuesArray = Object.values(authDataSchemaInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [
             {
-                query: usersDataQuery,
+                query: usersQuery,
                 valuesArray: usersValuesArray
+            },
+            {
+                query: usersDataQuery,
+                valuesArray: usersDataValuesArray,
             },
             {
                 query: authDataQuery,
@@ -122,15 +124,15 @@ class UserSignUpImpl implements UserSignUp {
             const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
             const redisEmailValue: Object = {
                 _id: userInfo._id,
-                name: userInfo.name,
-                username: userInfo.username,
-                password: userInfo.password,
-                salt: salt,
-                isEmailVerified: false,
+                name: userDataInfo.name,
+                username: userDataInfo.username,
+                password: authDataSchemaInfo.password,
+                salt: authDataSchemaInfo.salt,
+                isEmailVerified: authDataSchemaInfo.is_email_verified,
             };
 
             if (queryResponse.length) {
-                response.token = helper.generateUserAuthToken(userInfo._id, userInfo.username, userInfo.email, labels.operation);
+                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation);
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
