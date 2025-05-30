@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { userLoginControllerImpl } from "../../controllers/email_login.js";
-import { EmailLoginLabelInterface } from "../../database/interface/logger.js";
-import { LoginResponse } from "../../database/interface/response.js";
+import { EmailLoginLabelType } from "../../database/types/logger.js";
+import { LoginResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
 import { helper } from "../../utils/helper.js";
 
@@ -10,7 +10,7 @@ const emailLogin = async (call, callback) => {
     const context = {
         tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
     };
-    const labels: EmailLoginLabelInterface = {
+    const labels: EmailLoginLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.LOGIN_REQUEST,
         type: Constants.LOKI_LOGGER_LABELS.EMAIL,
     }
