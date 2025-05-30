@@ -1,8 +1,7 @@
 import { BooleanOrNull, StringOrNull } from "../../utils/custom_types.js";
 
-export interface AuthVerificationInterface {
+export type AuthVerificationType = {
     _id: StringOrNull,
-    google_email?: StringOrNull,
     is_email_verified?: BooleanOrNull,
     is_google_verified?: BooleanOrNull,
     is_passwordless?: BooleanOrNull,
