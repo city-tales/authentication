@@ -124,11 +124,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
             
-                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_DB, {
-                    query: deviceDataQuery,
-                    valuesArray: deviceValuesArray,
-                    errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
-                });
+                await utils.logUserDevice(deviceInfo, context, labels);
             }
             else {
                 response.statusCode = Constants.STATUS_CODES.CONFLICT;

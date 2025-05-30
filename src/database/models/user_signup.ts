@@ -134,12 +134,7 @@ class UserSignUpImpl implements UserSignUp {
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
-                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_DB, {
-                    query: deviceDataQuery,
-                    valuesArray: deviceValuesArray,
-                    errorMessage: Constants.DB_ERRORS.INSERTION_FAILED,
-                });
-
+                await utils.logUserDevice(deviceInfo, context, labels);
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
                     value: helper.serialiseRedisKeyValues(redisEmailValue)

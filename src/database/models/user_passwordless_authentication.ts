@@ -138,7 +138,7 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
                     response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.ALREADY_VERIFIED;
                 }
 
-                await this.logUserDevice(deviceInfo, context, labels);
+                await utils.logUserDevice(deviceInfo, context, labels);
             }
             else {
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.FAILED;
