@@ -1,10 +1,15 @@
-import { StringOrNull, StringOrNullOrUndefined } from "./custom_types.js";
+import {  StringOrNull, StringOrNullOrUndefined } from "./custom_types.js";
 
-export interface RedisEmailKeySerialisation {
+export type MultipleQueryObject = {
+    query: string;
+    valuesArray: any[];
+}[];
+
+export type RedisEmailKeySerialisation = { 
     email: StringOrNullOrUndefined,
 };
  
-export interface DecryptedAuthTokenInterface {
+export type DecryptedAuthTokenType = { 
     _id: string,
     username: string,
     email: string,
@@ -19,12 +24,12 @@ export interface DecryptedAuthTokenInterface {
     source?: StringOrNull,
 };
 
-export interface HashedPasswordInterface {
+export type HashedPasswordType = { 
     salt: string,
     hashedPassword: string,
 };
 
-export interface PasswordlessAuthenticationTokenInterface {
+export type PasswordlessAuthenticationTokenType = { 
     _id: string,
     username: string,
     email: string,

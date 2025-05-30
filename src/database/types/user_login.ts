@@ -1,9 +1,9 @@
-export interface UserLoginInterface {
+export type UserLoginType = {
     email: string,
     password: string,
 };
 
-export interface GRPCUserLoginInterface {
+export type GRPCUserLoginType = {
     email: string,
     password: string,
 };
