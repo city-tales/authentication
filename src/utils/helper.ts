@@ -23,7 +23,7 @@ interface Helper {
     isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
     generateHashPassword(password: string): HashedPasswordType;
     verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
-    generateUserAuthToken(_id: string, username: string, email: string, label: string): string;
+    generateUserAuthToken(_id: string, username: string, email: string, label: string, isVerified?: boolean): string;
     generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string;
     decryptAuthToken(token: string): DecryptedAuthTokenType;
     convertToClassType<T>(unknownValue: unknown, type: unknown): T;
@@ -200,17 +200,18 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateUserAuthToken(_id: string, username: string, email: string, label: string): string {
+    generateUserAuthToken(_id: string, username: string, email: string, label: string, isVerified?: boolean): string {
         const payload = {
             _id: _id,
             username: username,
             email: email,
-            source: label
+            source: label,
+            isVerified: this.isGenericNeitherNullNorUndefined(isVerified) && isVerified ? true : false,
         };
 
         const token: string = jwt.sign(payload, privateKey, {
             algorithm: Constants.JWT_CONFIG.ALGORITHM,
-            expiresIn: Constants.JWT_CONFIG.EXPIRY
+            expiresIn: Constants.JWT_CONFIG.SHORT_LIVED
         });
 
         return token;
@@ -236,7 +237,7 @@ export class HelperImpl implements Helper {
 
         const token: string = jwt.sign(payload, privateKey, {
             algorithm: Constants.JWT_CONFIG.ALGORITHM,
-            expiresIn: Constants.JWT_CONFIG.EXPIRY
+            expiresIn: Constants.JWT_CONFIG.VERY_SHORT_LIVED
         });
 
         return token;

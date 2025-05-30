@@ -53,7 +53,7 @@ class UserSignUpImpl implements UserSignUp {
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = data.is_email_verified || data.is_passwordless || data.is_google_verified;
 
-                if (response.verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation);
+                if (response.verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation, response.verified);
                 else throw new Error(Constants.SIGNUP_MESSAGE.NOT_VERIFIED);
 
                 const redisEmailValue: Object = {

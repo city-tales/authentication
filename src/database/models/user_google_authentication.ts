@@ -53,7 +53,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
 
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.EXISTING_USER;
-                response.token = helper.generateUserAuthToken(data._id, data.username, data.email, labels.operation);
+                response.token = helper.generateUserAuthToken(data._id, data.username, data.email, labels.operation, true);
             }
             else {
                 response.statusCode = Constants.STATUS_CODES.OK;
@@ -113,7 +113,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
             const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
 
             if (queryResponse.length === usersAuthDataQuery.length) {
-                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation);
+                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation, true);
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
