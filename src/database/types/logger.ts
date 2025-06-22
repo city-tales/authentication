@@ -15,6 +15,11 @@ export type EmailLoginLabelType = {
     type: string,
 };
 
+export type EmailForgotPasswordLabelType = {
+    operation: string,
+    type: string,
+};
+
 export type EmailVerificationLabelType = {
     operation: string,
     type: string,
