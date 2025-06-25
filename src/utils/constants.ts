@@ -78,6 +78,7 @@ enum LOKI_LOGGER_LABELS {
     REQUEST_TYPE = 'grpc',
     SIGNUP_REQUEST = 'signupRequest',
     LOGIN_REQUEST = 'loginRequest',
+    FORGOT_PASSWORD = 'forgotPassword',
     EMAIL_VERIFICATION = 'emailVerification',
     GOOGLE_AUTHENTICATION = 'googleAuthentication',
     MAGIC_LINK = 'magicLink',
@@ -146,6 +147,20 @@ enum LOGIN_MESSAGE {
     FAILED = 'Server Error',
     EMAIL_VERIFIED = 'Email successfully verified',
     ALREADY_VERIFIED = 'Email already verified',
+};
+
+enum FORGOT_PASSWORD_MESSAGE {
+    EMPTY = '',
+    EMPTY_TOKEN = '',
+    PROCESSING = 'Processing',
+    NOT_VERIFIED = 'Please verify email',
+    NO_CONTENT = 'Account do not exists',
+    EMAIL_DO_NOT_EXISTS = 'Email do not exists',
+    EMAIL_VERIFIED = 'Email successfully verified',
+    WRONG_AUTHENTICATION = 'Wrong Password',
+    VERIFICATION_FAILED = 'Retry Verification',
+    SUCCESS = 'Send Email for update',
+    FAILED = 'Server Error',
 };
 
 enum PASSWORDLESS_AUTHENTICATION_MESSAGE {
@@ -288,6 +303,7 @@ export class Constants {
     
     static readonly SIGNUP_MESSAGE = SIGNUP_MESSAGE;
     static readonly LOGIN_MESSAGE = LOGIN_MESSAGE;
+    static readonly FORGOT_PASSWORD_MESSAGE = FORGOT_PASSWORD_MESSAGE;
     static readonly PASSWORDLESS_AUTHENTICATION_MESSAGE = PASSWORDLESS_AUTHENTICATION_MESSAGE;
     static readonly GOOGLE_AUTHENTICATION_MESSAGE = GOOGLE_AUTHENTICATION_MESSAGE;
     static readonly CRYPTO_CONFIG = CRYPTO_CONFIG;

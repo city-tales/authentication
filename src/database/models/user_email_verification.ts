@@ -36,7 +36,7 @@ class UserEmailVerificationImpl implements UserEmailVerification {
 
         try {
             const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
-            if (!helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true WHERE user_id = $1`;
 
                 const updateQueryResponse = await helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);

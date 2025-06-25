@@ -52,6 +52,20 @@ export class EmailVerificationResponse {
     }
 }
 
+export class EmailForgotPasswordResponse {
+    public token: string;
+    public message: string;
+    public statusCode: number;
+    public name: string;
+
+    constructor(response?: EmailForgotPasswordResponse) {
+        this.token = response?.token ?? Constants.FORGOT_PASSWORD_MESSAGE.EMPTY_TOKEN;
+        this.message = response?.message ?? Constants.FORGOT_PASSWORD_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+        this.name = response?.name ?? Constants.FORGOT_PASSWORD_MESSAGE.EMPTY;
+    }
+}
+
 export class PasswordlessAuthenticationResponse {
     public token: string;
     public _id?: string;

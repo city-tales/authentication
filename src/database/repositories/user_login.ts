@@ -45,7 +45,7 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
                     response.statusCode = Constants.STATUS_CODES.OK;
                     response.retryVerification = !deSerialisedObject.isEmailVerified;
 
-                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, deSerialisedObject.isEmailVerified);
+                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
                     logPayload = { ...logPayload, ...loggerDefaultParams };
                     logPayload = helper.logResponse(logPayload, response);
                     logger.info({ ...logPayload });
