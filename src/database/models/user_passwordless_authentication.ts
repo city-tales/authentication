@@ -105,7 +105,7 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
                 const data = queryResponse.rows[0];
 
                 if(!data.is_email_verified || !data.is_passwordless) {
-                    const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, is_passwordless = true WHERE user_id = $1`;
+                    const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, updated_at = ${helper.formatDateTimeString()} is_passwordless = true WHERE user_id = $1`;
                     const updatedQueryResponse = await helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.UPDATE_FAILED, labels);
 
                     if (helper.isUpdateQuerySuccessful(updatedQueryResponse.command, updatedQueryResponse.rowCount)) {
@@ -151,7 +151,7 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
         const usersDataValuesArray = Object.values(userDataSchemaInfo);
 
         authDataSchemaInfo.is_passwordless = true;
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         const authValuesArray = Object.values(authDataSchemaInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [

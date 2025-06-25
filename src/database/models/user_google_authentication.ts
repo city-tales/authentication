@@ -41,7 +41,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
                 await utils.logUserDevice(deviceInfo, context, labels);
 
                 if(!data.is_google_verified) {
-                    const query = `UPDATE ${authTableName} SET is_google_verified = true WHERE _id = $1`;
+                    const query = `UPDATE ${authTableName} SET is_google_verified = true, updated_at = ${helper.formatDateTimeString()} WHERE _id = $1`;
                     const valuesArray = [data.row_id];
 
                     await queueEmployee.addJobToQueue(context, labels, Constants.DB.UPDATE_IN_DB, {
@@ -85,7 +85,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
         const userDataQuery = `INSERT INTO ${userDataTableName} (_id, email, name, username, profile_picture, user_id) VALUES ($1, $2, $3, $4, $5, $6)`;
         const userDeviceValuesArray = Object.values(userDataInfo);
         
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         const authValuesArray = Object.values(authenticationInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [

@@ -58,6 +58,7 @@ interface Helper {
     serializeErrorStrict(error, options);
     logErrorStack(logPayload: any, error: any);
     logResponse(logPayload: any, response);
+    formatDateTimeString(): string;
 };
 
 export class HelperImpl implements Helper {
@@ -665,6 +666,11 @@ export class HelperImpl implements Helper {
         };
 
         return cloneLogPayload;
+    }
+
+    formatDateTimeString(): string {
+        const dateTime = new Date();
+        return ("00" + (dateTime.getMonth() + 1)).slice(-2) + "/" + ("00" + dateTime.getDate()).slice(-2) + "/" + dateTime.getFullYear() + " " + ("00" + dateTime.getHours()).slice(-2) + ":" + ("00" + dateTime.getMinutes()).slice(-2) + ":" + ("00" + dateTime.getSeconds()).slice(-2);
     }
 }
 
