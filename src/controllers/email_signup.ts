@@ -60,6 +60,8 @@ class UserSignUpControllerImpl implements UserSignUpController {
             password: hashedPassword,
             salt: salt,
             user_id: userId,
+            created_at: helper.formatDateTimeString(),
+            updated_at: helper.formatDateTimeString(),
         };
     }
 

@@ -99,7 +99,7 @@ class UserSignUpImpl implements UserSignUp {
         const usersDataQuery = `INSERT INTO ${usersDataTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         const usersDataValuesArray = Object.values(userDataInfo);
 
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         const authValuesArray = Object.values(authDataSchemaInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [
