@@ -7,5 +7,7 @@ CREATE TABLE IF NOT EXISTS AUTH(
     password VARCHAR(256),
     salt CHAR(32),
     user_id VARCHAR(256),
-    FOREIGN KEY(user_id) REFERENCES USERS(_id)
+    created_at VARCHAR(256),
+    updated_at VARCHAR(256),
+    FOREIGN KEY(user_id) REFERENCES USERS(_id),
 );
