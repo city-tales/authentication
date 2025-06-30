@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS USERS_DATA (
     CHECK (email IS NOT NULL OR phone_number IS NOT NULL),
     user_id VARCHAR(256),
     FOREIGN KEY(user_id) REFERENCES USERS(_id)
+    
 );
 
 /*
