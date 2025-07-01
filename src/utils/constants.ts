@@ -81,6 +81,7 @@ enum LOKI_LOGGER_LABELS {
     FORGOT_PASSWORD = 'forgotPassword',
     EMAIL_VERIFICATION = 'emailVerification',
     GOOGLE_AUTHENTICATION = 'googleAuthentication',
+    UPDATE_PASSWORD_FOR_EMAIL = 'updatePasswordForEmail',
     MAGIC_LINK = 'magicLink',
 
     EMAIL = 'email',
@@ -186,6 +187,12 @@ enum GOOGLE_AUTHENTICATION_MESSAGE {
     EXISTING_USER = 'Account Already exists',
     SUCCESS = 'Logging In',
     FAILED = 'Server Error',
+};
+
+enum UPDATE_PASSWORD_FOR_EMAIL_MESSAGE {
+    SUCCESS = 'Password updated successfully',
+    FAILED = 'Password not updated',
+    NO_RECORD = 'Account do not exists',
 };
 
 enum CRYPTO_CONFIG {
@@ -306,6 +313,7 @@ export class Constants {
     static readonly FORGOT_PASSWORD_MESSAGE = FORGOT_PASSWORD_MESSAGE;
     static readonly PASSWORDLESS_AUTHENTICATION_MESSAGE = PASSWORDLESS_AUTHENTICATION_MESSAGE;
     static readonly GOOGLE_AUTHENTICATION_MESSAGE = GOOGLE_AUTHENTICATION_MESSAGE;
+    static readonly UPDATE_PASSWORD_FOR_EMAIL_MESSAGE = UPDATE_PASSWORD_FOR_EMAIL_MESSAGE;
     static readonly CRYPTO_CONFIG = CRYPTO_CONFIG;
     
     static readonly STATUS_CODES = STATUS_CODES;
