@@ -36,6 +36,11 @@ export type GoogleAuthenticationLabelType = {
     type: string
 };
 
+export type UpdateEmailForPasswordLabelType = {
+    operation: string,
+    type: string
+};
+
 export type AddJobToQueueLabelType = {
     operation: string,
     subOperation: string,

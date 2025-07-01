@@ -93,3 +93,15 @@ export class GoogleAuthenticationResponse {
         this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
     }
 }
+
+export class UpdateEmailForPasswordResponse {
+    public success: boolean;
+    public message: string;
+    public statusCode: number;
+
+    constructor(response?: UpdateEmailForPasswordResponse) {
+        this.success = response?.success ?? helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.FALSE, Constants.TYPE_SWITCH.BOOLEAN);
+        this.message = response?.message ?? Constants.UPDATE_PASSWORD_FOR_EMAIL_MESSAGE.FAILED;
+        this.statusCode = response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+    }
+}

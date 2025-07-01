@@ -34,3 +34,10 @@ export type PasswordlessAuthenticationTokenType = {
     username: string,
     email: string,
 };
+
+export type HashedPasswordWithIdForUpdateType = [
+    salt: string,
+    password: string, 
+    _id: string,
+    updated_at: string,
+];

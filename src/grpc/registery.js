@@ -5,6 +5,7 @@ import { emailVerification } from "./handlers/email_verification.js";
 import { passwordlessAuthentication } from "./handlers/passwordless_authentication.js";
 import { googleAuthentication } from "./handlers/google_authentication.js";
 import { emailForgotPassword } from "./handlers/email_forgot_password.js";
+import { updateEmailForPassword } from "./handlers/update_email_for_password.js";
 
 const rpcServiceMap = {
     EmailLogin: emailLogin,
@@ -13,6 +14,7 @@ const rpcServiceMap = {
     PasswordlessAuthentication: passwordlessAuthentication,
     GoogleAuthentication: googleAuthentication,
     EmailForgotPassword: emailForgotPassword,
+    UpdatePasswordForEmail: updateEmailForPassword,
 };
 
 const registerService = (server) => {
