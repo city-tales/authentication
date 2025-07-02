@@ -41,7 +41,6 @@ class UserSignUpControllerImpl implements UserSignUpController {
             secondary_country_code: sanitisedUserInfo.secondaryCountryCode,
             alternate_phone: sanitisedUserInfo.alternatePhone,
             profile_picture: null,
-            updated_at: helper.formatDateTimeString(),
             user_id: userId,
         };
     }

@@ -96,7 +96,7 @@ class UserSignUpImpl implements UserSignUp {
         const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1)`;
         const usersValuesArray = Object.values(userInfo);
 
-        const usersDataQuery = `INSERT INTO ${usersDataTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
+        const usersDataQuery = `INSERT INTO ${usersDataTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         const usersDataValuesArray = Object.values(userDataInfo);
 
         const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
