@@ -14,7 +14,9 @@ export type UserDataSignUpType = {
     secondary_country_code?: StringOrNull,
     alternate_phone?: StringOrNull,
     profile_picture?: StringOrNull,
+    updated_at: string,
     user_id: string,
+    updated_at: string,
 };
 
 export type AuthDataSignUpType = {

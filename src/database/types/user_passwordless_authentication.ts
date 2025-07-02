@@ -9,6 +9,7 @@ export type PasswordlessAuthenticationDataType = {
     email: string,
     username: string,
     user_id: string,
+    updated_at: string,
 };
 
 export type PasswordlessAuthenticationAuthType = {
