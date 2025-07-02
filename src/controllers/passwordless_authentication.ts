@@ -25,7 +25,8 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
             _id: uuidv4(),
             email: userInfo.email,
             username: helper.generateUniqueUserName(userInfo),
-            user_id: userId
+            user_id: userId,
+            updated_at: helper.formatDateTimeString(),
         };
     }
 
