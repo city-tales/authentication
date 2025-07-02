@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS USERS_DATA (
     secondary_country_code VARCHAR(4),
     alternate_phone VARCHAR(16) UNIQUE,
     profile_picture VARCHAR(512),
+    updated_at VARCHAR(256),
     CHECK (
         (phone_number IS NULL AND primary_country_code IS NULL) OR 
         (phone_number IS NOT NULL AND primary_country_code IS NOT NULL)

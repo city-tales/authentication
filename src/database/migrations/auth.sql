@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS AUTH(
     user_id VARCHAR(256),
     created_at VARCHAR(256),
     updated_at VARCHAR(256),
-    FOREIGN KEY(user_id) REFERENCES USERS(_id),
+    FOREIGN KEY(user_id) REFERENCES USERS(_id)
 );
