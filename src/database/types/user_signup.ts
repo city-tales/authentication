@@ -16,7 +16,6 @@ export type UserDataSignUpType = {
     profile_picture?: StringOrNull,
     updated_at: string,
     user_id: string,
-    updated_at: string,
 };
 
 export type AuthDataSignUpType = {
