@@ -14,6 +14,7 @@ export type UserDataSignUpType = {
     secondary_country_code?: StringOrNull,
     alternate_phone?: StringOrNull,
     profile_picture?: StringOrNull,
+    created_at: string,
     updated_at: string,
     user_id: string,
 };
