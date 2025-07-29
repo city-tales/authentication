@@ -3,7 +3,7 @@ import { passwordlessAuthenticationController } from "../../controllers/password
 import { PasswordlessAuthenticationLabelType } from "../../database/types/logger.js";
 import { PasswordlessAuthenticationResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 
 const passwordlessAuthentication = async (call, callback) => {
     const request = call.request;
@@ -26,17 +26,17 @@ const passwordlessAuthentication = async (call, callback) => {
         const response: PasswordlessAuthenticationResponse = await passwordlessAuthenticationController.generateUserPasswordlessTokenDetails(request.userPasswordlessAuthenticationRequest, request.userDeviceInformation, context, labels);
         toRet = response;
 
-        loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
         logPayload = { ...logPayload, ...loggerDefaultParams };
-        logPayload = helper.logResponse(logPayload, response);
+        logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
     }
     catch (error) {
         toRet = error;
 
-        loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
         logPayload = { ...logPayload, ...loggerDefaultParams };
-        logPayload = helper.logErrorStack(logPayload, error);
+        logPayload = Helper.logErrorStack(logPayload, error);
         logger.error({ ...logPayload });
 
         callback(error, null);
