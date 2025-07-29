@@ -47,7 +47,7 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
 
                 const userSchemaInfo: PasswordlessAuthenticationType = {
                     _id: Helper.isNeitherNullNorUndefinedNorEmpty(decryptedAuthToken._id) ? decryptedAuthToken._id : passwordlessAuthenticationController.mapUserPasswordlessAuthenticationSchema()._id,
-                    created_at: helper.formatDateTimeString(),
+                    created_at: Helper.formatDateTimeString(),
                 };
                 const userDataSchemaInfo: PasswordlessAuthenticationDataType = passwordlessAuthenticationController.mapUserDataPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);
                 const authDataSchemaInfo: PasswordlessAuthenticationAuthType = passwordlessAuthenticationController.mapUserAuthPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);

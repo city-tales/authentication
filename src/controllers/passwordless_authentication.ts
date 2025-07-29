@@ -17,7 +17,7 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
     mapUserPasswordlessAuthenticationSchema(): PasswordlessAuthenticationType {
         return {
             _id: uuidv4(),
-            created_at: helper.formatDateTimeString(),
+            created_at: Helper.formatDateTimeString(),
         };
     }
 
