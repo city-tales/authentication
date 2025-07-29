@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/types.js";
 import { DeviceType } from "../types/device_info.js";
 import { ContextType, EmailLoginLabelType } from "../types/logger.js";
@@ -21,8 +21,8 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userInfo.email,
         };
-        const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
+        const redisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
         );
 
         let loggerDefaultParams = {};
@@ -35,19 +35,19 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
 
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+            if (Helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
-                if(helper.verifyPassword(userInfo.password, deSerialisedObject.password, deSerialisedObject.salt)) {
+                if(Helper.verifyPassword(userInfo.password, deSerialisedObject.password, deSerialisedObject.salt)) {
                     response.name = deSerialisedObject.name;
-                    response.token = helper.generateUserAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email, labels.operation);
+                    response.token = Helper.generateUserAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email, labels.operation);
                     response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                     response.statusCode = Constants.STATUS_CODES.OK;
                     response.retryVerification = !deSerialisedObject.isEmailVerified;
 
-                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                    loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
                     logPayload = { ...logPayload, ...loggerDefaultParams };
-                    logPayload = helper.logResponse(logPayload, response);
+                    logPayload = Helper.logResponse(logPayload, response);
                     logger.info({ ...logPayload });
                 }
                 else {
@@ -61,11 +61,11 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.REDIS_MESSAGE.FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.REDIS_MESSAGE.FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new LoginResponse(response);
@@ -90,9 +90,9 @@ class UserLoginRepositoryImpl implements UserLoginRepository {
             response = userResponse;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new LoginResponse(error);

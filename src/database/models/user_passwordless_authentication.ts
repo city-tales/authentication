@@ -1,6 +1,6 @@
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { MultipleQueryObject, PasswordlessAuthenticationTokenType, RedisEmailKeySerialisation } from "../../utils/types.js";
 import { utils } from "../../utils/utils.js";
 import { queueEmployee } from "../../utils/workers.js";
@@ -32,9 +32,9 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
         };
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
                 
                 const prepareExistingUserToken: PasswordlessAuthenticationTokenType = {
@@ -44,10 +44,10 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
                 };
 
                 const userInfoFromData: RedisEmailKeySerialisation = {
-                    email: helper.sanitiseStringValue(userDataSchemaInfo.email),
+                    email: Helper.sanitiseStringValue(userDataSchemaInfo.email),
                 };
-                const redisKey: string = helper.serialiseRedisKeyValues(
-                    helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.PASSWORDLESS, userInfoFromData)
+                const redisKey: string = Helper.serialiseRedisKeyValues(
+                    Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.PASSWORDLESS, userInfoFromData)
                 );
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -56,14 +56,14 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue),
+                    value: Helper.serialiseRedisKeyValues(redisEmailValue),
                     timeout: Constants.DB_TIMEOUTS.SHORT_CACHE_DB_REDIS_TIMEOUT,
                 });
 
                 response._id = data._id;
                 response.username = data.username;
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.EXISTING_USER;
-                response.token = helper.generatePasswordlessAuthenticationAuthToken(prepareExistingUserToken, deviceInfo, labels.operation);
+                response.token = Helper.generatePasswordlessAuthenticationAuthToken(prepareExistingUserToken, deviceInfo, labels.operation);
             }
             else {
                 response._id = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.EMPTY;
@@ -73,11 +73,11 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
             response.statusCode = Constants.STATUS_CODES.OK;
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new PasswordlessAuthenticationResponse(error);
@@ -99,16 +99,16 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
         };
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length))  {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length))  {
                 const data = queryResponse.rows[0];
 
                 if(!data.is_email_verified || !data.is_passwordless) {
-                    const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, updated_at = ${helper.formatDateTimeString()} is_passwordless = true WHERE user_id = $1`;
-                    const updatedQueryResponse = await helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.UPDATE_FAILED, labels);
+                    const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, updated_at = ${Helper.formatDateTimeString()} is_passwordless = true WHERE user_id = $1`;
+                    const updatedQueryResponse = await Helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.UPDATE_FAILED, labels);
 
-                    if (helper.isUpdateQuerySuccessful(updatedQueryResponse.command, updatedQueryResponse.rowCount)) {
+                    if (Helper.isUpdateQuerySuccessful(updatedQueryResponse.command, updatedQueryResponse.rowCount)) {
                         response.success = true;
                         response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.UPDATED;
                     }
@@ -126,11 +126,11 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
             response.statusCode = Constants.STATUS_CODES.OK;
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(response);
@@ -177,7 +177,7 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
         };
 
         try {
-            const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
+            const queryResponse = await Helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
             const redisEmailValue: Object = {
                 _id: userInfo._id,
                 username: userDataSchemaInfo.username,
@@ -192,17 +192,17 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue),
+                    value: Helper.serialiseRedisKeyValues(redisEmailValue),
                     timeout: Constants.DB_TIMEOUTS.VERY_SHORT_CACHE_DB_REDIS_TIMEOUT,
                 });
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(response);

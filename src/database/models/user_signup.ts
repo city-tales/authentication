@@ -1,5 +1,5 @@
 import { SignUpResponse } from "../types/response.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { Constants } from "../../utils/constants.js";
 import { AuthDataSignUpType, UserDataSignUpType, UserSignUpType } from "../types/user_signup.js";
 import { DeviceType } from "../types/device_info.js";
@@ -43,9 +43,9 @@ class UserSignUpImpl implements UserSignUp {
         };
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rowCount)) {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rowCount)) {
                 if (!queryResponse.rowCount) response.message = Constants.SIGNUP_MESSAGE.NO_CONTENT;
                 else response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
 
@@ -53,7 +53,7 @@ class UserSignUpImpl implements UserSignUp {
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = data.is_email_verified || data.is_passwordless || data.is_google_verified;
 
-                if (response.verified) response.token = helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation, response.verified);
+                if (response.verified) response.token = Helper.generateUserAuthToken(data._id, data.username, valuesArray['email'], labels.operation, response.verified);
                 else throw new Error(Constants.SIGNUP_MESSAGE.NOT_VERIFIED);
 
                 const redisEmailValue: Object = {
@@ -66,7 +66,7 @@ class UserSignUpImpl implements UserSignUp {
                 };
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                    value: Helper.serialiseRedisKeyValues(redisEmailValue)
                 });
             }
             else {
@@ -75,11 +75,11 @@ class UserSignUpImpl implements UserSignUp {
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.READ_FAILURE;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.READ_FAILURE;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new SignUpResponse(response);
@@ -125,7 +125,7 @@ class UserSignUpImpl implements UserSignUp {
         };
 
         try {
-            const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
+            const queryResponse = await Helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
             const redisEmailValue: Object = {
                 _id: userInfo._id,
                 name: userDataInfo.name,
@@ -136,23 +136,23 @@ class UserSignUpImpl implements UserSignUp {
             };
 
             if (queryResponse.length) {
-                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation);
+                response.token = Helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation);
                 response.message = Constants.SIGNUP_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
                 await utils.logUserDevice(deviceInfo, context, labels);
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                    value: Helper.serialiseRedisKeyValues(redisEmailValue)
                 });
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.DB_ERRORS.INSERTION_FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new SignUpResponse(response);

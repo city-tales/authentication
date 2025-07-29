@@ -2,7 +2,7 @@ import { logger } from "../config/loki.js";
 import { DeviceType } from "../database/types/device_info.js";
 import { ContextType, GenericLabelType } from "../database/types/logger.js";
 import { Constants } from "./constants.js";
-import { helper } from "./helper.js";
+import { Helper } from "./helper.js";
 import { queueEmployee } from "./workers.js";
 
 interface Utils {
@@ -35,9 +35,9 @@ class UtilsImpl implements Utils {
 			});
 		}
 		catch (error) {
-			loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
+			loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
 			logPayload = { ...logPayload, ...loggerDefaultParams };
-			logPayload = helper.logErrorStack(logPayload, error);
+			logPayload = Helper.logErrorStack(logPayload, error);
 			logger.error({ ...logPayload });
 		}
 	}

@@ -3,7 +3,7 @@ import { userLoginControllerImpl } from "../../controllers/email_login.js";
 import { EmailLoginLabelType } from "../../database/types/logger.js";
 import { LoginResponse } from "../../database/types/response.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 
 const emailLogin = async (call, callback) => {
     const request = call.request;
@@ -26,17 +26,17 @@ const emailLogin = async (call, callback) => {
         const response: LoginResponse = await userLoginControllerImpl.loginUser(request.userEmailLoginRequest, request.userDeviceInformation, context, labels);
         toRet = response;
         
-        loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
         logPayload = { ...logPayload, ...loggerDefaultParams };
-        logPayload = helper.logResponse(logPayload, response);
+        logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
     }
     catch (error) {
         toRet = error;
 
-        loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
         logPayload = { ...logPayload, ...loggerDefaultParams };
-        logPayload = helper.logErrorStack(logPayload, error);
+        logPayload = Helper.logErrorStack(logPayload, error);
         logger.error({ ...logPayload });
 
         callback(error, null);
