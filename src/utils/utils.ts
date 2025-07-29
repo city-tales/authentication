@@ -1,8 +1,6 @@
-import { uuidv4 } from "../config/imports.js";
 import { logger } from "../config/loki.js";
 import { DeviceType } from "../database/types/device_info.js";
 import { ContextType, GenericLabelType } from "../database/types/logger.js";
-import { PasswordlessAuthenticationType } from "../database/types/user_passwordless_authentication.js";
 import { Constants } from "./constants.js";
 import { Helper } from "./helper.js";
 import { queueEmployee } from "./workers.js";

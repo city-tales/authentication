@@ -93,13 +93,13 @@ class UserSignUpImpl implements UserSignUp {
         const usersDataTableName = Constants.TABLES.USER_DATA_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
 
-        const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1)`;
+        const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1, $2)`;
         const usersValuesArray = Object.values(userInfo);
 
         const usersDataQuery = `INSERT INTO ${usersDataTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
         const usersDataValuesArray = Object.values(userDataInfo);
 
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const authValuesArray = Object.values(authDataSchemaInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [

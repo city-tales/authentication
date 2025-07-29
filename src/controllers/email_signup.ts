@@ -22,7 +22,8 @@ class UserSignUpControllerImpl implements UserSignUpController {
         );
 
         return {
-            _id: uuidv4()
+            _id: uuidv4(),
+            created_at: Helper.formatDateTimeString(),
         };
     }
 
@@ -61,7 +62,6 @@ class UserSignUpControllerImpl implements UserSignUpController {
             password: hashedPassword,
             salt: salt,
             user_id: userId,
-            created_at: Helper.formatDateTimeString(),
             updated_at: Helper.formatDateTimeString(),
         };
     }

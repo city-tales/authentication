@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS USERS(
     _id VARCHAR(256) PRIMARY KEY
+    created_at VARCHAR(256)
 );
 
 CREATE TABLE IF NOT EXISTS USERS_DATA (
@@ -27,8 +28,8 @@ CREATE TABLE IF NOT EXISTS USERS_DATA (
     ),
     CHECK (email IS NOT NULL OR phone_number IS NOT NULL),
     user_id VARCHAR(256),
+    updated_at VARCHAR(256),
     FOREIGN KEY(user_id) REFERENCES USERS(_id)
-    
 );
 
 /*

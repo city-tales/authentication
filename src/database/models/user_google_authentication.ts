@@ -85,7 +85,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
         const userDataQuery = `INSERT INTO ${userDataTableName} (_id, email, name, username, profile_picture, user_id) VALUES ($1, $2, $3, $4, $5, $6)`;
         const userDeviceValuesArray = Object.values(userDataInfo);
         
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const authValuesArray = Object.values(authenticationInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [
