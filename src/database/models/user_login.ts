@@ -1,6 +1,6 @@
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/types.js";
 import { utils } from "../../utils/utils.js";
 import { queueEmployee } from "../../utils/workers.js";
@@ -35,16 +35,16 @@ class UserLoginImpl implements UserLogin {
         };
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
 
                 const userInfoFromData: RedisEmailKeySerialisation = {
-                    email: helper.sanitiseStringValue(userInfo.email),
+                    email: Helper.sanitiseStringValue(userInfo.email),
                 };
-                const redisKey: string = helper.serialiseRedisKeyValues(
-                    helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+                const redisKey: string = Helper.serialiseRedisKeyValues(
+                    Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
                 );
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -59,9 +59,9 @@ class UserLoginImpl implements UserLogin {
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = !(data.is_email_verified || data.is_passwordless || data.is_google_verified);
-                response.token = helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation, !response.retryVerification);
+                response.token = Helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation, !response.retryVerification);
 
-                if(helper.verifyPassword(userInfo.password, data.password, data.salt)) {
+                if(Helper.verifyPassword(userInfo.password, data.password, data.salt)) {
                     if(data.is_email_verified || data.is_passwordless || data.is_google_verified) {
                         deviceInfo.user_id = data._id;
                         
@@ -73,7 +73,7 @@ class UserLoginImpl implements UserLogin {
 
                     await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                         key: redisKey,
-                        value: helper.serialiseRedisKeyValues(redisEmailValue)
+                        value: Helper.serialiseRedisKeyValues(redisEmailValue)
                     }); 
                 }
                 else {
@@ -89,11 +89,11 @@ class UserLoginImpl implements UserLogin {
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new LoginResponse(response);

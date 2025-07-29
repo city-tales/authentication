@@ -1,6 +1,6 @@
 import { error } from "winston";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { RedisEmailKeySerialisation } from "../../utils/types.js";
 import { DeviceType } from "../types/device_info.js";
 import { ContextType, EmailForgotPasswordLabelType } from "../types/logger.js";
@@ -32,21 +32,21 @@ class UserForgotPasswordImpl implements UserForgotPassword {
         };
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
 
-                if(helper.isGenericEitherNullOrUndefined(data)) throw new Error(Constants.FORGOT_PASSWORD_MESSAGE.NO_CONTENT);
+                if(Helper.isGenericEitherNullOrUndefined(data)) throw new Error(Constants.FORGOT_PASSWORD_MESSAGE.NO_CONTENT);
                 
                 const isEmailVerified = data.is_email_verified || data.is_passwordless || data.is_google_verified;
                 if(!isEmailVerified) throw new Error(Constants.FORGOT_PASSWORD_MESSAGE.NOT_VERIFIED);
         
                 const userInfoFromData: RedisEmailKeySerialisation = {
-                    email: helper.sanitiseStringValue(email),
+                    email: Helper.sanitiseStringValue(email),
                 };
-                const redisKey: string = helper.serialiseRedisKeyValues(
-                    helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+                const redisKey: string = Helper.serialiseRedisKeyValues(
+                    Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
                 );
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -59,12 +59,12 @@ class UserForgotPasswordImpl implements UserForgotPassword {
 
                 response.message = Constants.FORGOT_PASSWORD_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
-                response.token = helper.generateUserAuthToken(data._id, data.username, email, labels.operation, isEmailVerified);
+                response.token = Helper.generateUserAuthToken(data._id, data.username, email, labels.operation, isEmailVerified);
                 response.name = data.name;
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: redisKey,
-                    value: helper.serialiseRedisKeyValues(redisEmailValue)
+                    value: Helper.serialiseRedisKeyValues(redisEmailValue)
                 }); 
             }
             else {
@@ -73,11 +73,11 @@ class UserForgotPasswordImpl implements UserForgotPassword {
             }
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailForgotPasswordResponse(response);

@@ -6,7 +6,7 @@ import { GPRCPasswordlessAuthenticationType, PasswordlessAuthenticationAuthType,
 import { userEmailVerificationRepositoriesImpl } from "../database/repositories/user_email_verification.js";
 import { userPasswordlessAuthenticationRepositories } from "../database/repositories/user_passwordless_authentication.js";
 import { Constants } from "../utils/constants.js";
-import { helper } from "../utils/helper.js";
+import { Helper } from "../utils/helper.js";
 import { DecryptedAuthTokenType } from "../utils/types.js";
 import { utils } from "../utils/utils.js";
 import { passwordlessAuthenticationController } from "./passwordless_authentication.js";
@@ -25,7 +25,7 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
         };
 
         try {
-            const decryptedAuthToken: DecryptedAuthTokenType = helper.decryptAuthToken(token);
+            const decryptedAuthToken: DecryptedAuthTokenType = Helper.decryptAuthToken(token);
 
             if(decryptedAuthToken.source === Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST) {
                 const userResponse: EmailVerificationResponse = await userEmailVerificationRepositoriesImpl.verifyEmail(decryptedAuthToken, context, labels);
@@ -46,20 +46,20 @@ class UserEmailVerificationControllerImpl implements UserEmailVerificationContro
                 };
 
                 const userSchemaInfo: PasswordlessAuthenticationType = {
-                    _id: helper.isNeitherNullNorUndefinedNorEmpty(decryptedAuthToken._id) ? decryptedAuthToken._id : passwordlessAuthenticationController.mapUserPasswordlessAuthenticationSchema()._id
+                    _id: Helper.isNeitherNullNorUndefinedNorEmpty(decryptedAuthToken._id) ? decryptedAuthToken._id : passwordlessAuthenticationController.mapUserPasswordlessAuthenticationSchema()._id
                 };
                 const userDataSchemaInfo: PasswordlessAuthenticationDataType = passwordlessAuthenticationController.mapUserDataPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);
                 const authDataSchemaInfo: PasswordlessAuthenticationAuthType = passwordlessAuthenticationController.mapUserAuthPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);
-                const deviceSchemaInfo: DeviceType = helper.mapDeviceSchema(rawDeviceSchemaInfo, userSchemaInfo._id);
+                const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(rawDeviceSchemaInfo, userSchemaInfo._id);
                 
                 const userResponse: EmailVerificationResponse = await userPasswordlessAuthenticationRepositories.createUser(userSchemaInfo, userDataSchemaInfo, authDataSchemaInfo, deviceSchemaInfo, context, labels);
                 response = userResponse;
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);

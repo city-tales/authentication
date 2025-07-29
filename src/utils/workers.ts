@@ -3,7 +3,7 @@ import { logger } from "../config/loki.js";
 import { bullMQConnectionObject } from "../config/redis.js";
 import { AddJobToQueueLabelType, ContextType, RegisterWorkerLabelType } from "../database/types/logger.js";
 import { Constants } from "./constants.js";
-import { helper } from "./helper.js";
+import { Helper } from "./helper.js";
 import { saveInDBQueueEmployee, saveInRedisQueueEmployee, updateInDBQueueEmployee } from "./queue.js";
 
 interface QueueInterface {
@@ -54,13 +54,13 @@ class QueueImpl implements QueueInterface {
                 queueLabel,
             }, queueJobConfig);
 
-            loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
+            loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
             logPayload = { ...logPayload, ...loggerDefaultParams };
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.QUEUE);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
             
             throw new Error(error);
@@ -86,12 +86,12 @@ class QueueImpl implements QueueInterface {
             };
 
             try {
-                await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
+                await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
             }
             catch (error) {
-                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
+                loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
                 logPayload = { ...logPayload, ...loggerDefaultParams };
-                logPayload = helper.logErrorStack(logPayload, error);
+                logPayload = Helper.logErrorStack(logPayload, error);
                 logger.error({ ...logPayload });
 
                 throw new Error(error);
@@ -114,12 +114,12 @@ class QueueImpl implements QueueInterface {
             };
 
             try {
-                await helper.setRedis(context, registerWorkerLabel, key, helper.serialiseRedisKeyValues(value), timeout);
+                await Helper.setRedis(context, registerWorkerLabel, key, Helper.serialiseRedisKeyValues(value), timeout);
             }
             catch (error) {
-                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_REDIS);
+                loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_REDIS);
                 logPayload = { ...logPayload, ...loggerDefaultParams };
-                logPayload = helper.logErrorStack(logPayload, error);
+                logPayload = Helper.logErrorStack(logPayload, error);
                 logger.error({ ...logPayload });
 
                 throw new Error(error);
@@ -142,13 +142,13 @@ class QueueImpl implements QueueInterface {
             };
 
             try {
-                const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
-                if(!helper.isUpdateQuerySuccessful(queryResponse.command, queryResponse.rowCount)) throw new Error(Constants.DB_ERRORS.UPDATE_FAILED);
+                const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, errorMessage, queueLabel);
+                if(!Helper.isUpdateQuerySuccessful(queryResponse.command, queryResponse.rowCount)) throw new Error(Constants.DB_ERRORS.UPDATE_FAILED);
             }
             catch (error) {
-                loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
+                loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.DB.SAVE_IN_DB);
                 logPayload = { ...logPayload, ...loggerDefaultParams };
-                logPayload = helper.logErrorStack(logPayload, error);
+                logPayload = Helper.logErrorStack(logPayload, error);
                 logger.error({ ...logPayload });
 
                 throw new Error(error);
@@ -159,8 +159,8 @@ class QueueImpl implements QueueInterface {
     private registerWorker(queueName: string, processor: (job: Job) => Promise<void>) {
         const worker = new Worker(queueName, processor, {
             connection: bullMQConnectionObject.connection,
-            lockDuration: helper.convertToType<number>(Constants.QUEUE_DB.LOCK_DURATION, Constants.TYPE_SWITCH.NUMBER),
-            concurrency: helper.convertToType<number>(Constants.QUEUE_DB.CONCURRENCY, Constants.TYPE_SWITCH.NUMBER),
+            lockDuration: Helper.convertToType<number>(Constants.QUEUE_DB.LOCK_DURATION, Constants.TYPE_SWITCH.NUMBER),
+            concurrency: Helper.convertToType<number>(Constants.QUEUE_DB.CONCURRENCY, Constants.TYPE_SWITCH.NUMBER),
         });
 
         this.workers.set(queueName, worker);
@@ -172,7 +172,7 @@ class QueueImpl implements QueueInterface {
         worker.on('completed', job => {
             const { context, queueLabel } = job?.data || {};
 
-            loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.PERFORM_JOB);
+            loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.PERFORM_JOB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...queueLabel };
             logPayload = { ...logPayload, ...job };
@@ -183,11 +183,11 @@ class QueueImpl implements QueueInterface {
             // DLQ Implementation
             const { context, queueLabel } = job?.data || {};
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.FAILED_JOB);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.WORKER, Constants.LOKI_LOGGER_LABELS.FAILED_JOB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...queueLabel };
             logPayload = { ...logPayload, ...job };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
         });
     }

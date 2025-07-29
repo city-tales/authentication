@@ -6,79 +6,28 @@ import { DecryptedAuthTokenType, HashedPasswordType, MultipleQueryObject, Passwo
 import { BooleanOrNullOrUndefined, NumberOrNull, NumberOrNullOrUndefined, StringOrNull, StringOrNullOrUndefined, StringOrUndefined } from "./custom_types.js";
 import { ContextType } from "../database/types/logger.js";
 import { logger } from "../config/loki.js";
-import { AuthVerificationType } from "../database/types/auth_verification.js";
 import { RedisResponse } from "../database/types/response.js";
 import { crypto, adjectives, faker, jwt, nouns, uniqueUsernameGenerator, uuidv4 } from "../config/imports.js";
 import { jwtPublicKey, privateKey } from "../config/config.js";
-import { utils } from "./utils.js";
 
-interface Helper {
-    createQueryColumn(columns: unknown): unknown;
-    formatQueryValue(value: unknown): string;
-    createQueryValues(values: unknown): unknown;
-    executeQueryAsyncWithoutLock(context: ContextType, query: unknown, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number);
-    executeMultipleQueryAsyncWithoutLock(context: ContextType, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number);
-    isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean;
-    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean;
-    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean;
-    generateHashPassword(password: string): HashedPasswordType;
-    verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean;
-    generateUserAuthToken(_id: string, username: string, email: string, label: string, isVerified?: boolean): string;
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string;
-    decryptAuthToken(token: string): DecryptedAuthTokenType;
-    convertToClassType<T>(unknownValue: unknown, type: unknown): T;
-    convertToType<T>(unknownValue: unknown, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T;
-    prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object;
-    serialiseRedisKeyValues(keyValuePairs: Object): string;
-    parseRedisValueToObject(value: string);
-    setRedis(context: ContextType, labels, key: string, value: string, timeout?: number): Promise<void>;
-    mapDeviceSchema(deviceInfo: GPRCDeviceType, userId: string): DeviceType;
-    parseBooleanString(truthValue: StringOrNullOrUndefined): boolean;
-    isNotEmpty(value: string): boolean;
-    isValidNumeric(value: number): boolean;
-    isValidBoolean(value: boolean): boolean;
-    isEitherNullOrUndefined(value: StringOrNullOrUndefined): boolean;
-    isEitherNullOrUndefinedOrEmpty(value: StringOrNullOrUndefined): boolean;
-    isGenericEitherNullOrUndefined(value: boolean | number | StringOrNullOrUndefined): boolean;
-    isNeitherNullNorUndefined(value: StringOrNullOrUndefined): boolean;
-    isNeitherNullNorUndefinedNorEmpty(value: StringOrNullOrUndefined): boolean;
-    isGenericNeitherNullNorUndefined(value: boolean | number | StringOrNullOrUndefined): boolean;
-    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | StringOrNullOrUndefined): boolean;
-    passStringNullParams(value: StringOrNullOrUndefined): StringOrNull;
-    passNumberNullParams(value: NumberOrNullOrUndefined): NumberOrNull;
-    generateUniqueUserName(userInfo): string;
-    trimStringValue(value: string): string;
-    sanitiseStringValue(value: StringOrNullOrUndefined): StringOrNull;
-    sanitiseNumericValue(value: NumberOrNullOrUndefined): NumberOrNull;
-    sanitiseObject(object: Object): Object;
-    generateContext();
-    generateDefaultSuccessParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
-    generateDefaultFailureParams(tracerId: string, codeIdentifier?: string, source?: StringOrNullOrUndefined);
-    serializeError(error);
-    serializeErrorStrict(error, options);
-    logErrorStack(logPayload: any, error: any);
-    logResponse(logPayload: any, response);
-    formatDateTimeString(): string;
-};
-
-export class HelperImpl implements Helper {
-    createQueryColumn(columns: any): any {
+export class Helper {
+    static createQueryColumn(columns: any): any {
         const column = Object.keys(columns).join(', ');
         return column;
     }
 
-    formatQueryValue(value: unknown): string {
+    static formatQueryValue(value: unknown): string {
         if (typeof value === 'number') return `'${value}'`;
         if (value instanceof Date) return `'${value.toISOString()}'`;
         return `'${value as string}'`;
     }
 
-    createQueryValues(values: any): any {
+    static createQueryValues(values: any): any {
         const value = Object.values(values).map(this.formatQueryValue).join(', ');
         return value;
     }
 
-    async executeQueryAsyncWithoutLock(context: ContextType, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
+    static async executeQueryAsyncWithoutLock(context: ContextType, query: any, valuesArray?, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -119,7 +68,7 @@ export class HelperImpl implements Helper {
         }
     }
 
-    async executeMultipleQueryAsyncWithoutLock(context: ContextType, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
+    static async executeMultipleQueryAsyncWithoutLock(context: ContextType, queries: MultipleQueryObject, errorMessage?: string, labels?, queryTimeout?: number) {
         const dB = await pool.connect();
         const response: string[] = [];
         let loggerDefaultParams = {};
@@ -168,22 +117,22 @@ export class HelperImpl implements Helper {
         }
     }
 
-    isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean {
+    static isInsertQuerySuccessful(queryCommand: string, rowCount: number): boolean {
         if (queryCommand === Constants.DB_COMMANDS.INSERT && rowCount) return true;
         return false;
     }
 
-    isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean {
+    static isSelectQuerySuccessful(queryCommand: string, fieldCount: number): boolean {
         if (queryCommand === Constants.DB_COMMANDS.SELECT && fieldCount) return true;
         return false;
     }
 
-    isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean {
+    static isUpdateQuerySuccessful(queryCommand: string, rowCount: number): boolean {
         if (queryCommand === Constants.DB_COMMANDS.UPDATE && rowCount) return true;
         return false;
     }
 
-    generateHashPassword(password: string): HashedPasswordType {
+    static generateHashPassword(password: string): HashedPasswordType {
         const salt = crypto.randomBytes(Constants.CRYPTO_CONFIG.BYTES_16).toString(Constants.CRYPTO_CONFIG.HEX);
         const hashedPassword = crypto.scryptSync(password, salt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
         return { 
@@ -192,7 +141,7 @@ export class HelperImpl implements Helper {
         };
     }
 
-    verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean {
+    static verifyPassword(inputPassword: string, storedHash: string, storedSalt: string): boolean {
         try {
             const hashToCompare = crypto.scryptSync(inputPassword, storedSalt, Constants.CRYPTO_CONFIG.BYTES_64).toString(Constants.CRYPTO_CONFIG.HEX);
             return hashToCompare === storedHash;
@@ -201,7 +150,7 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    generateUserAuthToken(_id: string, username: string, email: string, label: string, isVerified?: boolean): string {
+    static generateUserAuthToken(_id: string, username: string, email: string, label: string, isVerified?: boolean): string {
         const payload = {
             _id: _id,
             username: username,
@@ -218,9 +167,9 @@ export class HelperImpl implements Helper {
         return token;
     }
 
-    generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string {
-        const sanitisedDeviceInfo: GPRCDeviceType = helper.convertToType<GPRCDeviceType>(
-            helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
+    static generatePasswordlessAuthenticationAuthToken(userInfo: PasswordlessAuthenticationTokenType, deviceInfo: DeviceType, label: string): string {
+        const sanitisedDeviceInfo: GPRCDeviceType = this.convertToType<GPRCDeviceType>(
+            this.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         const payload = {
@@ -232,7 +181,7 @@ export class HelperImpl implements Helper {
             ipAddress: sanitisedDeviceInfo.ipAddress,
             platform: sanitisedDeviceInfo.platform,
             deviceName: sanitisedDeviceInfo.deviceName,
-            loginTime: sanitisedDeviceInfo.loginTime || utils.CURRENT_TIME,
+            loginTime: sanitisedDeviceInfo.loginTime || new Date().toISOString(),
             source: label,
         };
 
@@ -244,7 +193,7 @@ export class HelperImpl implements Helper {
         return token;
     }
 
-    decryptAuthToken(token: string): DecryptedAuthTokenType {
+    static decryptAuthToken(token: string): DecryptedAuthTokenType {
         try {
             const payload = jwt.verify(token, jwtPublicKey, {
                 algorithms: Constants.JWT_CONFIG.ALGORITHM
@@ -256,11 +205,11 @@ export class HelperImpl implements Helper {
         }
     }
 
-    convertToClassType<T>(response: unknown, classType: new (...args: any[]) => T): T {
+    static convertToClassType<T>(response: unknown, classType: new (...args: any[]) => T): T {
         return response as T;
     }
 
-    convertToType<T>(response: any, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T {
+    static convertToType<T>(response: any, type: 'boolean' | 'number' | 'string' | 'object' | 'Object' | 'interface'): T {
         if (type === 'boolean') {
             return (response === 'true' || response === true) as unknown as T;
         }
@@ -278,21 +227,21 @@ export class HelperImpl implements Helper {
         return response as T;
     }
 
-    prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
+    static prepareUserRedisKeyValues(key: string, userInfo: RedisEmailKeySerialisation): Object {
         return {
             key: key,
             email: this.isEitherNullOrUndefined(userInfo.email) ? Constants.SERIALISATION_KEYS.EMAIL : userInfo.email,
         }
     };
 
-    serialiseRedisKeyValues(keyValuePairs: Object): string {
+    static serialiseRedisKeyValues(keyValuePairs: Object): string {
         const rawString = JSON.stringify(keyValuePairs);
         const serialisedString = rawString.replace(/"/g, "'");
 
         return serialisedString;
     }
 
-    parseRedisValueToObject(value: string) {
+    static parseRedisValueToObject(value: string) {
         let serialisedString = value
             .replace(/'/g, '"')
             .replace(/([{,]\s*)("?)([a-zA-Z0-9_]+)\2(?=\s*:)/g, '$1"$3"');
@@ -305,7 +254,7 @@ export class HelperImpl implements Helper {
         return deSerialisedObject;
     }
 
-    async setRedis(context: ContextType, labels, key: string, value: string, timeout?: number): Promise<void> {
+    static async setRedis(context: ContextType, labels, key: string, value: string, timeout?: number): Promise<void> {
         const switchOffForDev: boolean = this.convertToType<boolean>(Constants.DEV_CONTROLLER.SWTICH_OFF_REDIS, Constants.TYPE_SWITCH.BOOLEAN);
         if (switchOffForDev) return;
 
@@ -328,7 +277,7 @@ export class HelperImpl implements Helper {
             logger.info({ ...logPayload });
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
+            loggerDefaultParams = this.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CACHE_DB);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = this.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
@@ -337,9 +286,9 @@ export class HelperImpl implements Helper {
         }
     }
 
-    mapDeviceSchema(deviceInfo: GPRCDeviceType, userId?: StringOrNull): DeviceType {
-        const sanitisedDeviceInfo: GPRCDeviceType = helper.convertToType<GPRCDeviceType>(
-            helper.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
+    static mapDeviceSchema(deviceInfo: GPRCDeviceType, userId?: StringOrNull): DeviceType {
+        const sanitisedDeviceInfo: GPRCDeviceType = this.convertToType<GPRCDeviceType>(
+            this.sanitiseObject(deviceInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
@@ -349,58 +298,58 @@ export class HelperImpl implements Helper {
             ip_address: sanitisedDeviceInfo.ipAddress,
             platform: sanitisedDeviceInfo.platform,
             device_name: sanitisedDeviceInfo.deviceName,
-            login_time: sanitisedDeviceInfo?.loginTime || utils.CURRENT_TIME(),
+            login_time: sanitisedDeviceInfo?.loginTime || new Date().toISOString(),
             user_id: userId ?? null,
         };
     }
 
-    parseBooleanString(truthValue: StringOrNullOrUndefined): boolean {
+    static parseBooleanString(truthValue: StringOrNullOrUndefined): boolean {
         if (this.isNeitherNullNorUndefined(truthValue))
             return truthValue === Constants.BOOLEAN_VALUES.TRUE ? true : false;
         return false;
     }
 
-    isNotEmpty(value: string): boolean {
+    static isNotEmpty(value: string): boolean {
         return value === '' ? true : false;
     }
 
-    isValidNumeric(value: NumberOrNullOrUndefined): boolean {
+    static isValidNumeric(value: NumberOrNullOrUndefined): boolean {
         return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'number' ? true : false;
     }
 
-    isValidBoolean(value: BooleanOrNullOrUndefined): boolean {
+    static isValidBoolean(value: BooleanOrNullOrUndefined): boolean {
         return this.isGenericNeitherNullNorUndefined(value) && typeof value === 'boolean' ? true : false;
     }
  
-    isEitherNullOrUndefined(value: StringOrNullOrUndefined): boolean {
+    static isEitherNullOrUndefined(value: StringOrNullOrUndefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isEitherNullOrUndefinedOrEmpty(value: StringOrNullOrUndefined): boolean {
+    static isEitherNullOrUndefinedOrEmpty(value: StringOrNullOrUndefined): boolean {
         if(this.isEitherNullOrUndefined(value)) return true;
         return this.trimStringValue(value as string) === "" ? true : false;
     }
 
-    isGenericEitherNullOrUndefined(value: boolean | string | NumberOrNullOrUndefined): boolean {
+    static isGenericEitherNullOrUndefined(value: boolean | string | NumberOrNullOrUndefined): boolean {
         return (value === null || value === undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefined(value: StringOrNullOrUndefined): boolean {
+    static isNeitherNullNorUndefined(value: StringOrNullOrUndefined): boolean {
         return (value !== null && value !== undefined) ? true : false;
     }
 
-    isNeitherNullNorUndefinedNorEmpty(value: StringOrNullOrUndefined): boolean {
+    static isNeitherNullNorUndefinedNorEmpty(value: StringOrNullOrUndefined): boolean {
         if (this.isNeitherNullNorUndefined(value)) {
             return this.trimStringValue(value as string) !== "" ? true : false;
         }
         return false;
     }
 
-    isGenericNeitherNullNorUndefined(value: boolean | number | StringOrNullOrUndefined): boolean {
+    static isGenericNeitherNullNorUndefined(value: boolean | number | StringOrNullOrUndefined): boolean {
         return (value !== null && value !== undefined) ? true : false;
     }
 
-    isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | StringOrNullOrUndefined): boolean {
+    static isGenericNeitherNullNorUndefinedNorInvalid(value: boolean | number | StringOrNullOrUndefined): boolean {
         if(this.isGenericNeitherNullNorUndefined(value)) {
             if(typeof value === 'string') return this.isNotEmpty(value);
             if(typeof value === 'number') return this.isValidNumeric(value) && this.isValidNumeric(value);
@@ -409,15 +358,15 @@ export class HelperImpl implements Helper {
         return false;
     }
 
-    passStringNullParams(value: StringOrNullOrUndefined): StringOrNull {
+    static passStringNullParams(value: StringOrNullOrUndefined): StringOrNull {
         return this.isEitherNullOrUndefined(value) ? null : this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING);
     }
 
-    passNumberNullParams(value: NumberOrNullOrUndefined): NumberOrNull {
+    static passNumberNullParams(value: NumberOrNullOrUndefined): NumberOrNull {
         return this.isGenericEitherNullOrUndefined(value) ? null : this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER);
     }
 
-    generateUniqueUserName(userInfo): string {
+    static generateUniqueUserName(userInfo): string {
         const config = {
             dictionaries: [adjectives, nouns],
             separator: '-',
@@ -443,7 +392,7 @@ export class HelperImpl implements Helper {
         if (this.isNeitherNullNorUndefinedNorEmpty(userInfo.phoneNumber)) {
             phonePrefix = userInfo.phoneNumber!.split('-')[1];
             baseUsername += (this.isNeitherNullNorUndefinedNorEmpty(
-                helper.convertToType<string>(phonePrefix, Constants.TYPE_SWITCH.STRING)) ? `${phonePrefix}-` : `${faker.number.int(
+                this.convertToType<string>(phonePrefix, Constants.TYPE_SWITCH.STRING)) ? `${phonePrefix}-` : `${faker.number.int(
                     { min: 100, max: 999 })
                 }-`)
         }
@@ -452,21 +401,21 @@ export class HelperImpl implements Helper {
         return baseUsername;
     }
 
-    trimStringValue(value: string): string {
+    static trimStringValue(value: string): string {
         value = value?.trimStart();
         value = value?.trimEnd();
         return value;
     }
 
-    sanitiseStringValue(value: StringOrNullOrUndefined): StringOrNull {
+    static sanitiseStringValue(value: StringOrNullOrUndefined): StringOrNull {
         return this.isNeitherNullNorUndefinedNorEmpty(value) ? this.convertToType<string>(value, Constants.TYPE_SWITCH.STRING) : null;
     }
 
-    sanitiseNumericValue(value: NumberOrNullOrUndefined): NumberOrNull {
+    static sanitiseNumericValue(value: NumberOrNullOrUndefined): NumberOrNull {
         return this.isGenericNeitherNullNorUndefined(value) && this.isValidNumeric(value!) ? this.convertToType<number>(value, Constants.TYPE_SWITCH.NUMBER) : null;
     }
 
-    sanitiseObject(object: Object): Object {
+    static sanitiseObject(object: Object): Object {
         return Object.fromEntries(
             Object.entries(object).map(([key, value]) => {
                 if (typeof value === 'number') return [key, this.sanitiseNumericValue(value)];
@@ -476,14 +425,14 @@ export class HelperImpl implements Helper {
         );
     }
 
-    generateContext() {
+    static generateContext() {
         const tracerId = uuidv4();
         return {
             tracerId: tracerId,
         };
     }
 
-    generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
+    static generateDefaultSuccessParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
         const timestamp = Date.now();
 
         return {
@@ -496,7 +445,7 @@ export class HelperImpl implements Helper {
         };
     }
 
-    generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
+    static generateDefaultFailureParams(tracerId: unknown, codeIdentifier?: string, source?: StringOrNullOrUndefined) {
         const timestamp = Date.now();
 
         return {
@@ -514,7 +463,7 @@ export class HelperImpl implements Helper {
      * @param {Error} error - The error object to serialize
      * @returns {Object} - Serialized error object with only meaningful properties
      */
-    serializeError(error) {
+    static serializeError(error) {
         if (!error) return {};
         
         const serialized = {};
@@ -574,7 +523,7 @@ export class HelperImpl implements Helper {
      * @param {Object} options - Configuration options
      * @returns {Object} - Serialized error object
      */
-    serializeErrorStrict(error, options = {}) {
+    static serializeErrorStrict(error, options = {}) {
         if (!error) return {};
         
         const {
@@ -642,7 +591,7 @@ export class HelperImpl implements Helper {
         return serialized;
     }
 
-    logErrorStack(logPayload: any, error: any, customMessage?: string) {
+    static logErrorStack(logPayload: any, error: any, customMessage?: string) {
         const errorObj = this.serializeError(error);
         const cloneLogPayload = {
             ...logPayload,
@@ -659,7 +608,7 @@ export class HelperImpl implements Helper {
         return cloneLogPayload;
     }
 
-    logResponse(logPayload: any, response: any) {
+    static logResponse(logPayload: any, response: any) {
         const cloneLogPayload = {
             ...logPayload,
             response: { ...(logPayload.response || {}), ...response },
@@ -668,10 +617,8 @@ export class HelperImpl implements Helper {
         return cloneLogPayload;
     }
 
-    formatDateTimeString(): string {
+    static formatDateTimeString(): string {
         const dateTime = new Date();
         return ("00" + (dateTime.getMonth() + 1)).slice(-2) + "/" + ("00" + dateTime.getDate()).slice(-2) + "/" + dateTime.getFullYear() + " " + ("00" + dateTime.getHours()).slice(-2) + ":" + ("00" + dateTime.getMinutes()).slice(-2) + ":" + ("00" + dateTime.getSeconds()).slice(-2);
     }
 }
-
-export const helper = new HelperImpl(); 

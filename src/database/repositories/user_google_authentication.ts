@@ -1,6 +1,6 @@
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { DeviceType } from "../types/device_info.js";
 import { ContextType, GoogleAuthenticationLabelType } from "../types/logger.js";
 import { GoogleAuthenticationResponse } from "../types/response.js";
@@ -29,9 +29,9 @@ class UserGoogleAuthenticationRepositoriesImpl implements UserGoogleAuthenticati
             response = userResponse;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new GoogleAuthenticationResponse(error);
@@ -62,9 +62,9 @@ class UserGoogleAuthenticationRepositoriesImpl implements UserGoogleAuthenticati
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new GoogleAuthenticationResponse(error);

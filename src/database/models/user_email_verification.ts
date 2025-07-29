@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { DecryptedAuthTokenType, RedisEmailKeySerialisation } from "../../utils/types.js";
 import { queueEmployee } from "../../utils/workers.js";
 import { ContextType, EmailVerificationLabelType } from "../types/logger.js";
@@ -24,23 +24,23 @@ class UserEmailVerificationImpl implements UserEmailVerification {
         const valuesArray = [decryptedAuthToken._id];
 
         const userInfoFromData: RedisEmailKeySerialisation = {
-            email: helper.sanitiseStringValue(decryptedAuthToken.email)
+            email: Helper.sanitiseStringValue(decryptedAuthToken.email)
         };
 
-        const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+        const redisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
-        const existingRedisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+        const existingRedisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
         );
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
-                const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, updated_at = ${helper.formatDateTimeString()} WHERE user_id = $1`;
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+                const updateQuery = `UPDATE ${authTableName} SET is_email_verified = true, updated_at = ${Helper.formatDateTimeString()} WHERE user_id = $1`;
 
-                const updateQueryResponse = await helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
-                if (!helper.isUpdateQuerySuccessful(updateQueryResponse.command, updateQueryResponse.rowCount)) throw new Error(Constants.DB_ERRORS.UPDATE_FAILED);
+                const updateQueryResponse = await Helper.executeQueryAsyncWithoutLock(context, updateQuery, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+                if (!Helper.isUpdateQuerySuccessful(updateQueryResponse.command, updateQueryResponse.rowCount)) throw new Error(Constants.DB_ERRORS.UPDATE_FAILED);
 
                 response.message = Constants.LOGIN_MESSAGE.EMAIL_VERIFIED;
             }
@@ -56,8 +56,8 @@ class UserEmailVerificationImpl implements UserEmailVerification {
             };
 
             const isKeyInRedis = await cacheDB.get(existingRedisKey);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+            if (Helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
                 const updatedRedisEmailValue: Object = {
                     _id: deSerialisedObject._id,
@@ -70,13 +70,13 @@ class UserEmailVerificationImpl implements UserEmailVerification {
 
                 await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                     key: existingRedisKey,
-                    value: helper.serialiseRedisKeyValues(updatedRedisEmailValue),
+                    value: Helper.serialiseRedisKeyValues(updatedRedisEmailValue),
                 });
             }
 
             await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
                 key: redisKey,
-                value: helper.serialiseRedisKeyValues(redisEmailValue),
+                value: Helper.serialiseRedisKeyValues(redisEmailValue),
                 timeout: Constants.DB_TIMEOUTS.LONG_CACHE_DB_REDIS_TIMEOUT
             });
 
@@ -84,12 +84,12 @@ class UserEmailVerificationImpl implements UserEmailVerification {
             response.statusCode = Constants.STATUS_CODES.OK;
         }
         catch (error) {
-            response.message = helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...decryptedAuthToken };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(response);

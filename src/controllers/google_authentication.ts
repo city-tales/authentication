@@ -6,7 +6,7 @@ import { GoogleAuthenticationResponse } from "../database/types/response.js";
 import { GoogleAuthenticationAuthType, GoogleAuthenticationDataType, GoogleAuthenticationType, GPRCGoogleAuthenticationAuthSchemaType } from "../database/types/user_google_authentication.js";
 import { userGoogleAuthenticationRepositories } from "../database/repositories/user_google_authentication.js";
 import { Constants } from "../utils/constants.js";
-import { helper } from "../utils/helper.js";
+import { Helper } from "../utils/helper.js";
 
 interface GoogleAuthenticationController {
     mapGoogleUserAuthenticationSchema(): GoogleAuthenticationType;
@@ -27,7 +27,7 @@ class GoogleAuthenticationControllerImpl implements GoogleAuthenticationControll
             _id: uuidv4(),
             email: userInfo.email,
             name: userInfo.name,
-            username: helper.generateUniqueUserName(userInfo),
+            username: Helper.generateUniqueUserName(userInfo),
             profile_picture: userInfo.profilePicture,
             user_id: userId,
         }
@@ -50,7 +50,7 @@ class GoogleAuthenticationControllerImpl implements GoogleAuthenticationControll
         const userAuthenticationSchemaInfo: GoogleAuthenticationType = this.mapGoogleUserAuthenticationSchema();
         const userDataAuthenticationSchemaInfo: GoogleAuthenticationDataType = this.mapGoogleUserDataAuthenticationSchema(userInfo, userAuthenticationSchemaInfo._id);
         const userAuthAuthenticationSchemaInfo: GoogleAuthenticationAuthType = this.mapGoogleUserAuthDataAuthenticationSchema(userInfo, userAuthenticationSchemaInfo._id);
-        const deviceLoginSchemaInfo: DeviceType = helper.mapDeviceSchema(deviceInfo, userAuthenticationSchemaInfo._id);
+        const deviceLoginSchemaInfo: DeviceType = Helper.mapDeviceSchema(deviceInfo, userAuthenticationSchemaInfo._id);
 
         let response = new GoogleAuthenticationResponse();
         let loggerDefaultParams = {};
@@ -67,9 +67,9 @@ class GoogleAuthenticationControllerImpl implements GoogleAuthenticationControll
             response = userResponse;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new GoogleAuthenticationResponse(error);

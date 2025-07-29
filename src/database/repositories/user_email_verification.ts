@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { DecryptedAuthTokenType } from "../../utils/types.js";
 import { ContextType, EmailVerificationLabelType } from "../types/logger.js";
 import { EmailVerificationResponse } from "../types/response.js";
@@ -20,28 +20,28 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
         };
 
         const userInfoFromData = {
-            email: helper.sanitiseStringValue(decryptedAuthToken.email)
+            email: Helper.sanitiseStringValue(decryptedAuthToken.email)
         };
 
-        const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
+        const redisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.VERIFICATION, userInfoFromData)
         );
 
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
-                const isEmailVerified: boolean = helper.convertToType<boolean>(deSerialisedObject.isEmailVerified, Constants.TYPE_SWITCH.BOOLEAN);
+            if (Helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+                const isEmailVerified: boolean = Helper.convertToType<boolean>(deSerialisedObject.isEmailVerified, Constants.TYPE_SWITCH.BOOLEAN);
 
                 if (isEmailVerified) {
                     response.success = true;
                     response.message = Constants.LOGIN_MESSAGE.ALREADY_VERIFIED;
                     response.statusCode = Constants.STATUS_CODES.OK;
 
-                    loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+                    loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
                     logPayload = { ...logPayload, ...loggerDefaultParams };
                     logPayload = { ...logPayload, ...{ redisKey: redisKey } };
-                    logPayload = helper.logResponse(logPayload, response);
+                    logPayload = Helper.logResponse(logPayload, response);
                     logger.info({ ...logPayload });
 
                     return response;
@@ -52,10 +52,10 @@ class UserEmailVerificationRepositoriesImpl implements UserEmailVerificationRepo
             response = userResponse;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...decryptedAuthToken };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);

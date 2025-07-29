@@ -6,7 +6,7 @@ import { SignUpResponse } from "../database/types/response.js";
 import { AuthDataSignUpType, GPRCUserSignUpType, UserDataSignUpType, UserSignUpType } from "../database/types/user_signup.js";
 import { userSignUp } from "../database/repositories/user_signup.js";
 import { Constants } from "../utils/constants.js";
-import { helper } from "../utils/helper.js";
+import { Helper } from "../utils/helper.js";
 
 interface UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpType): UserSignUpType;
@@ -17,8 +17,8 @@ interface UserSignUpController {
 
 class UserSignUpControllerImpl implements UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpType): UserSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = helper.convertToType<GPRCUserSignUpType>(
-            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
+        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
+            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
@@ -27,31 +27,30 @@ class UserSignUpControllerImpl implements UserSignUpController {
     }
 
     mapUserDataSchema(userInfo: GPRCUserSignUpType, userId: string): UserDataSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = helper.convertToType<GPRCUserSignUpType>(
-            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
+        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
+            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
 
         return {
             _id: uuidv4(),
             email: sanitisedUserInfo.email,
             name: sanitisedUserInfo.name,
-            username: helper.generateUniqueUserName(sanitisedUserInfo),
+            username: Helper.generateUniqueUserName(sanitisedUserInfo),
             primary_country_code: sanitisedUserInfo.primaryCountryCode,
             phone_number: sanitisedUserInfo.phoneNumber,
             secondary_country_code: sanitisedUserInfo.secondaryCountryCode,
             alternate_phone: sanitisedUserInfo.alternatePhone,
             profile_picture: null,
-            created_at: helper.formatDateTimeString(),
-            updated_at: helper.formatDateTimeString(),
+            updated_at: Helper.formatDateTimeString(),
             user_id: userId,
         };
     }
 
     mapAuthDataSchema(userInfo: GPRCUserSignUpType, userId: string): AuthDataSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = helper.convertToType<GPRCUserSignUpType>(
-            helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
+        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
+            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
         );
-        const { salt, hashedPassword } = helper.generateHashPassword(sanitisedUserInfo.password);
+        const { salt, hashedPassword } = Helper.generateHashPassword(sanitisedUserInfo.password);
 
         return {
             _id: uuidv4(),
@@ -62,8 +61,8 @@ class UserSignUpControllerImpl implements UserSignUpController {
             password: hashedPassword,
             salt: salt,
             user_id: userId,
-            created_at: helper.formatDateTimeString(),
-            updated_at: helper.formatDateTimeString(),
+            created_at: Helper.formatDateTimeString(),
+            updated_at: Helper.formatDateTimeString(),
         };
     }
 
@@ -71,7 +70,7 @@ class UserSignUpControllerImpl implements UserSignUpController {
         const userSchemaInfo: UserSignUpType = this.mapUserSchema(userInfo);
         const userDataSchemaInfo: UserDataSignUpType = this.mapUserDataSchema(userInfo, userSchemaInfo._id);
         const authDataSchemaInfo: AuthDataSignUpType = this.mapAuthDataSchema(userInfo, userSchemaInfo._id)
-        const deviceSchemaInfo: DeviceType = helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
+        const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
 
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
@@ -100,9 +99,9 @@ class UserSignUpControllerImpl implements UserSignUpController {
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new SignUpResponse(error);
