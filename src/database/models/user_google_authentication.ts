@@ -1,7 +1,7 @@
 import { uuidv4 } from "../../config/imports.js";
 import { logger } from "../../config/loki.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { MultipleQueryObject } from "../../utils/types.js";
 import { utils } from "../../utils/utils.js";
 import { queueEmployee } from "../../utils/workers.js";
@@ -32,16 +32,16 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
         const valuesArray = [ email ];
 
         try {
-            const queryResponse = await helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
 
-            if (helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
                 const data = queryResponse.rows[0];
                 deviceInfo.user_id = data._id;
 
                 await utils.logUserDevice(deviceInfo, context, labels);
 
                 if(!data.is_google_verified) {
-                    const query = `UPDATE ${authTableName} SET is_google_verified = true, updated_at = ${helper.formatDateTimeString()} WHERE _id = $1`;
+                    const query = `UPDATE ${authTableName} SET is_google_verified = true, updated_at = ${Helper.formatDateTimeString()} WHERE _id = $1`;
                     const valuesArray = [data.row_id];
 
                     await queueEmployee.addJobToQueue(context, labels, Constants.DB.UPDATE_IN_DB, {
@@ -53,7 +53,7 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
 
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.EXISTING_USER;
-                response.token = helper.generateUserAuthToken(data._id, data.username, data.email, labels.operation, true);
+                response.token = Helper.generateUserAuthToken(data._id, data.username, data.email, labels.operation, true);
             }
             else {
                 response.statusCode = Constants.STATUS_CODES.OK;
@@ -61,9 +61,9 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new GoogleAuthenticationResponse(error);
@@ -110,10 +110,10 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
         };
 
         try {
-            const queryResponse = await helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
+            const queryResponse = await Helper.executeMultipleQueryAsyncWithoutLock(context, usersAuthDataQuery, Constants.DB_ERRORS.INSERTION_FAILED, labels);
 
             if (queryResponse.length === usersAuthDataQuery.length) {
-                response.token = helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation, true);
+                response.token = Helper.generateUserAuthToken(userInfo._id, userDataInfo.username, userDataInfo.email, labels.operation, true);
                 response.message = Constants.GOOGLE_AUTHENTICATION_MESSAGE.CREATED;
                 response.statusCode = Constants.STATUS_CODES.CREATED;
 
@@ -125,9 +125,9 @@ class UserGoogleAuthenticationImpl implements UserGoogleAuthentication {
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new GoogleAuthenticationResponse(error);

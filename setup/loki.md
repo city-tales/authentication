@@ -51,7 +51,7 @@ const options = {
                 env: Constants.LOKI_LOGGER.DEMOENV, // For local environment
                 // env: Constants.LOKI_LOGGER.PRODENV, // For prod environment
             }, // default labels
-            // json: helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE),
+            // json: Helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE),
             basicAuth: `${lokiLoggerUser}:${lokiLoggerToken}`,
             format: winston.format.json(),
             // replaceTimestamp: true,

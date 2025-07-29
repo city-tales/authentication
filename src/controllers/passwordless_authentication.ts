@@ -4,7 +4,7 @@ import { ContextType, PasswordlessAuthenticationLabelType } from "../database/ty
 import { PasswordlessAuthenticationResponse } from "../database/types/response.js";
 import { GPRCPasswordlessAuthenticationType, PasswordlessAuthenticationAuthType, PasswordlessAuthenticationDataType, PasswordlessAuthenticationType } from "../database/types/user_passwordless_authentication.js";
 import { userPasswordlessAuthenticationRepositories } from "../database/repositories/user_passwordless_authentication.js";
-import { helper } from "../utils/helper.js";
+import { Helper } from "../utils/helper.js";
 
 interface PasswordlessAuthenticationController {
     mapUserPasswordlessAuthenticationSchema(): PasswordlessAuthenticationType;
@@ -24,9 +24,9 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
         return {
             _id: uuidv4(),
             email: userInfo.email,
-            username: helper.generateUniqueUserName(userInfo),
+            username: Helper.generateUniqueUserName(userInfo),
             user_id: userId,
-            updated_at: helper.formatDateTimeString(),
+            updated_at: Helper.formatDateTimeString(),
         };
     }
 
@@ -46,7 +46,7 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
     async generateUserPasswordlessTokenDetails(userInfo: GPRCPasswordlessAuthenticationType, deviceInfo: GPRCDeviceType, context: ContextType, labels: PasswordlessAuthenticationLabelType): Promise<PasswordlessAuthenticationResponse> {
         const userSchemaInfo: PasswordlessAuthenticationType = this.mapUserPasswordlessAuthenticationSchema();
         const userDataSchemaInfo: PasswordlessAuthenticationDataType = this.mapUserDataPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);
-        const deviceSchemaInfo: DeviceType = helper.mapDeviceSchema(deviceInfo);
+        const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(deviceInfo);
 
         return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, userDataSchemaInfo, deviceSchemaInfo, context, labels);
     }

@@ -1,7 +1,7 @@
 import { logger } from "../../config/loki.js";
 import { cacheDB } from "../../config/redis.js";
 import { Constants } from "../../utils/constants.js";
-import { helper } from "../../utils/helper.js";
+import { Helper } from "../../utils/helper.js";
 import { PasswordlessAuthenticationTokenType, RedisEmailKeySerialisation } from "../../utils/types.js";
 import { utils } from "../../utils/utils.js";
 import { DeviceType } from "../types/device_info.js";
@@ -25,8 +25,8 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userDataSchemaInfo.email,
         };
-        const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.PASSWORDLESS, userInfoForRedisKey)
+        const redisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.PASSWORDLESS, userInfoForRedisKey)
         );
         let generatedToken = '';
 
@@ -38,13 +38,13 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
                 email: userDataSchemaInfo.email,
             };
 
-            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+            if (Helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
 
                 prepareUserToken._id = deSerialisedObject._id;
                 prepareUserToken.username = deSerialisedObject.username;
 
-                generatedToken = helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
+                generatedToken = Helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.LINK_ALREADY_SENT;
             }
             else {
@@ -52,10 +52,10 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
                 if (isExistingUser.message === Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.EXISTING_USER) {
                     prepareUserToken._id = isExistingUser._id!;
                     prepareUserToken.username = isExistingUser.username!;
-                    generatedToken = helper.isNeitherNullNorUndefinedNorEmpty(isExistingUser.token) ? isExistingUser.token : helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
+                    generatedToken = Helper.isNeitherNullNorUndefinedNorEmpty(isExistingUser.token) ? isExistingUser.token : Helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
                 }
                 else {
-                    generatedToken = helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
+                    generatedToken = Helper.generatePasswordlessAuthenticationAuthToken(prepareUserToken, deviceSchemaInfo, labels.operation);
                 }
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.CREATED;
             }
@@ -66,18 +66,18 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
             response.statusCode = Constants.STATUS_CODES.OK;
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);
         }
 
-        loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
         logPayload = { ...logPayload, ...{ token: response } };
         logPayload = { ...logPayload, ...loggerDefaultParams };
-        logPayload = helper.logResponse(logPayload, response);
+        logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
         
         return response;
@@ -97,22 +97,22 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
         const userInfoForRedisKey: RedisEmailKeySerialisation = {
             email: userDataSchemaInfo.email,
         };
-        const redisKey: string = helper.serialiseRedisKeyValues(
-            helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.MAGIC_LINK, userInfoForRedisKey)
+        const redisKey: string = Helper.serialiseRedisKeyValues(
+            Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.MAGIC_LINK, userInfoForRedisKey)
         );
 
         try {
             const isKeyInRedis = await cacheDB.get(redisKey);
-            if (helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
-                const deSerialisedObject = helper.parseRedisValueToObject(helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+            if (Helper.isNeitherNullNorUndefinedNorEmpty(isKeyInRedis)) {
+                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
                 await utils.logUserDevice(deviceInfo, context, labels);
                 response.message = Constants.PASSWORDLESS_AUTHENTICATION_MESSAGE.ALREADY_VERIFIED;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.success = true;
 
-                loggerDefaultParams = helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+                loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
                 logPayload = { ...logPayload, ...loggerDefaultParams };
-                logPayload = helper.logResponse(logPayload, deSerialisedObject);
+                logPayload = Helper.logResponse(logPayload, deSerialisedObject);
                 logger.info({ ...logPayload });
 
                 return response;
@@ -133,9 +133,9 @@ class UserPasswordlessAuthenticationRepositoriesImpl implements UserPasswordless
             }
         }
         catch (error) {
-            loggerDefaultParams = helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES, context.source);
             logPayload = { ...logPayload, ...loggerDefaultParams };
-            logPayload = helper.logErrorStack(logPayload, error);
+            logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
 
             throw new EmailVerificationResponse(error);
