@@ -2,4 +2,4 @@
 /.vscode
 /.env
 /dist
-/src/database/db_migrations/
+/src/database/db_migrations
