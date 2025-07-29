@@ -7,6 +7,7 @@ import { AuthDataSignUpType, GPRCUserSignUpType, UserDataSignUpType, UserSignUpT
 import { userSignUp } from "../database/repositories/user_signup.js";
 import { Constants } from "../utils/constants.js";
 import { helper } from "../utils/helper.js";
+import { utils } from "../utils/utils.js";
 
 interface UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpType): UserSignUpType;
@@ -22,7 +23,8 @@ class UserSignUpControllerImpl implements UserSignUpController {
         );
 
         return {
-            _id: uuidv4()
+            _id: uuidv4(),
+            created_at: helper.formatDateTimeString(),
         };
     }
 
@@ -61,7 +63,6 @@ class UserSignUpControllerImpl implements UserSignUpController {
             password: hashedPassword,
             salt: salt,
             user_id: userId,
-            created_at: helper.formatDateTimeString(),
             updated_at: helper.formatDateTimeString(),
         };
     }

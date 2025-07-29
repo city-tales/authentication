@@ -16,7 +16,8 @@ interface PasswordlessAuthenticationController {
 class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthenticationController {
     mapUserPasswordlessAuthenticationSchema(): PasswordlessAuthenticationType {
         return {
-            _id: uuidv4()
+            _id: uuidv4(),
+            created_at: helper.formatDateTimeString(),
         };
     }
 

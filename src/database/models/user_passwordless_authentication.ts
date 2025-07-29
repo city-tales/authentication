@@ -144,14 +144,14 @@ class UserPasswordlessAuthenticationImpl implements UserPasswordlessAuthenticati
         const usersDataTableName = Constants.TABLES.USER_DATA_TABLE;
         const authTableName = Constants.TABLES.AUTH_TABLE;
 
-        const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1)`;
+        const usersQuery = `INSERT INTO ${usersTableName} VALUES ($1, $2)`;
         const usersValuesArray = Object.values(userInfo);
 
         const usersDataQuery = `INSERT INTO ${usersDataTableName} (_id, email, username, user_id, updated_at) VALUES ($1, $2, $3, $4, $5)`;
         const usersDataValuesArray = Object.values(userDataSchemaInfo);
 
         authDataSchemaInfo.is_passwordless = true;
-        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+        const authDataQuery = `INSERT INTO ${authTableName} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         const authValuesArray = Object.values(authDataSchemaInfo);
 
         const usersAuthDataQuery: MultipleQueryObject = [

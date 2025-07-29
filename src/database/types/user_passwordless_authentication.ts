@@ -2,6 +2,7 @@ import { StringOrNull } from "../../utils/custom_types.js";
 
 export type PasswordlessAuthenticationType = {
     _id: string,
+    created_at: string,
 };
 
 export type PasswordlessAuthenticationDataType = {
