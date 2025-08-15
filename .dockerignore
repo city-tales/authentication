@@ -1,0 +1,27 @@
+.dockerignore
+Dockerfile
+.git
+*.csv
+*.dat
+*.iml
+*.log
+*.out
+*.pid
+*.seed
+*.sublime-*
+*.swo
+*.swp
+*.tgz
+*.xml
+.DS_Store
+.idea
+.project
+.vscode
+dist
+setup
+npm-debug.log
+node_modules
+**/.DS_Store
+
+# Ignore env file
+.env
