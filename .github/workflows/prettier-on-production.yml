@@ -1,0 +1,36 @@
+name: Prettify on push to production
+
+on:
+    push:
+        branches: [production]
+
+permissions:
+    contents: write
+
+jobs:
+    format:
+        # prevent infinite loops when the bot commits formatting
+        if: github.actor != 'github-actions[bot]'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install deps
+              run: npm ci || npm i
+
+            - name: Run Prettier (write)
+              run: npx prettier . --write
+
+            - name: Commit & push changes (if any)
+              uses: stefanzweifel/git-auto-commit-action@v5
+              with:
+                  commit_message: "chore: auto-format with Prettier"
+                  branch: ${{ github.ref_name }}
