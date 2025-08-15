@@ -8,9 +8,11 @@ import { Helper } from "../../utils/helper.js";
 const emailVerification = async (call, callback) => {
     const request = call.request;
     const rawSource = Helper.decryptAuthToken(request.token)?.source;
-    const source = Helper.isNeitherNullNorUndefinedNorEmpty(rawSource) ? rawSource : Constants.LOKI_LOGGER_LABELS.EMAIL_VERIFICATION;
+    const source = Helper.isNeitherNullNorUndefinedNorEmpty(rawSource)
+        ? rawSource
+        : Constants.LOKI_LOGGER_LABELS.EMAIL_VERIFICATION;
     const context = {
-        tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
+        tracerId: call.metadata.internalRepr.get("tracerid")?.[0],
         source: source,
     };
     const labels: EmailVerificationLabelType = {
@@ -27,18 +29,30 @@ const emailVerification = async (call, callback) => {
     };
 
     try {
-        const response: EmailVerificationResponse = await userEmailVerificationControllerImpl.verifyEmail(request.token, context, labels);
+        const response: EmailVerificationResponse =
+            await userEmailVerificationControllerImpl.verifyEmail(
+                request.token,
+                context,
+                labels,
+            );
         toRet = response;
 
-        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER, context.source);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+            context.source,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
-    }
-    catch (error) {
+    } catch (error) {
         toRet = error;
 
-        loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER, context.source);
+        loggerDefaultParams = Helper.generateDefaultFailureParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+            context.source,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logErrorStack(logPayload, error);
         logger.error({ ...logPayload });
@@ -49,6 +63,4 @@ const emailVerification = async (call, callback) => {
     callback(null, toRet);
 };
 
-export {
-    emailVerification
-};
+export { emailVerification };

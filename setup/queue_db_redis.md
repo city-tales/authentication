@@ -20,12 +20,13 @@ After your Redis database is created, you will be provided with the **Redis Conn
 
 #### For Node.js
 
-1. Install the Redis client library: ``` npm install bullmq ```
+1. Install the Redis client library: `npm install bullmq`
 2. ENV Variables
+
 ```
    QUEUE_DB_REDIS_URL = ""
-   QUEUE_DB_REDIS_USERNAME = 
-   QUEUE_DB_REDIS_PASSWORD = 
-   QUEUE_DB_REDIS_HOST = 
-   QUEUE_DB_REDIS_PORT = 
+   QUEUE_DB_REDIS_USERNAME =
+   QUEUE_DB_REDIS_PASSWORD =
+   QUEUE_DB_REDIS_HOST =
+   QUEUE_DB_REDIS_PORT =
 ```

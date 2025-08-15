@@ -6,7 +6,7 @@ const options = {
     transports: [
         new LokiTransport({
             host: lokiLoggerUrl!,
-            labels: { 
+            labels: {
                 app: Constants.LOKI_LOGGER.APPLICATION,
                 env: Constants.LOKI_LOGGER.DEMOENV, // For local environment
                 // env: Constants.LOKI_LOGGER.PRODENV, // For prod environment
@@ -17,7 +17,7 @@ const options = {
             // replaceTimestamp: true,
             onConnectionError: (error) => console.error(error),
         }),
-    ]
+    ],
 };
 
 export const logger = createLogger(options);

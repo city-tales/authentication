@@ -8,7 +8,7 @@ import { Helper } from "../../utils/helper.js";
 const emailSignUp = async (call, callback) => {
     const request = call.request;
     const context = {
-        tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
+        tracerId: call.metadata.internalRepr.get("tracerid")?.[0],
     };
     const labels: EmailSignUpLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.SIGNUP_REQUEST,
@@ -23,18 +23,29 @@ const emailSignUp = async (call, callback) => {
     };
 
     try {
-        const response: SignUpResponse = await userSignUpControllerImpl.createUser(request.userEmailSignUpRequest, request.userDeviceInformation, context, labels);
+        const response: SignUpResponse =
+            await userSignUpControllerImpl.createUser(
+                request.userEmailSignUpRequest,
+                request.userDeviceInformation,
+                context,
+                labels,
+            );
         toRet = response;
 
-        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
-    }
-    catch (error) {
+    } catch (error) {
         toRet = error;
 
-        loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultFailureParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logErrorStack(logPayload, error);
         logger.error({ ...logPayload });
@@ -45,6 +56,4 @@ const emailSignUp = async (call, callback) => {
     callback(null, toRet);
 };
 
-export {
-    emailSignUp
-};
+export { emailSignUp };

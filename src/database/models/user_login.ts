@@ -10,11 +10,21 @@ import { LoginResponse } from "../types/response.js";
 import { UserLoginType } from "../types/user_login.js";
 
 interface UserLogin {
-    loginUser(userInfo: UserLoginType, deviceInfo: DeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse>;
+    loginUser(
+        userInfo: UserLoginType,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailLoginLabelType,
+    ): Promise<LoginResponse>;
 }
 
 class UserLoginImpl implements UserLogin {
-    async loginUser(userInfo: UserLoginType, deviceInfo: DeviceType, context: ContextType, labels: EmailLoginLabelType): Promise<LoginResponse> {
+    async loginUser(
+        userInfo: UserLoginType,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailLoginLabelType,
+    ): Promise<LoginResponse> {
         let response = new LoginResponse();
 
         const userTableName = Constants.TABLES.USER_DATA_TABLE;
@@ -35,16 +45,30 @@ class UserLoginImpl implements UserLogin {
         };
 
         try {
-            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(
+                context,
+                query,
+                valuesArray,
+                Constants.DB_ERRORS.READ_FAILURE,
+                labels,
+            );
 
-            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (
+                Helper.isSelectQuerySuccessful(
+                    queryResponse.command,
+                    queryResponse.rows.length,
+                )
+            ) {
                 const data = queryResponse.rows[0];
 
                 const userInfoFromData: RedisEmailKeySerialisation = {
                     email: Helper.sanitiseStringValue(userInfo.email),
                 };
                 const redisKey: string = Helper.serialiseRedisKeyValues(
-                    Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+                    Helper.prepareUserRedisKeyValues(
+                        Constants.SERIALISATION_KEYS.USER,
+                        userInfoFromData,
+                    ),
                 );
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -52,46 +76,80 @@ class UserLoginImpl implements UserLogin {
                     username: data.username,
                     password: data.password,
                     salt: data.salt,
-                    isEmailVerified: data.is_email_verified || data.is_passwordless || data.is_google_verified,
+                    isEmailVerified:
+                        data.is_email_verified ||
+                        data.is_passwordless ||
+                        data.is_google_verified,
                 };
 
                 response.name = data.name;
                 response.message = Constants.LOGIN_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
-                response.retryVerification = !(data.is_email_verified || data.is_passwordless || data.is_google_verified);
-                response.token = Helper.generateUserAuthToken(data._id, data.username, userInfo.email, labels.operation, !response.retryVerification);
+                response.retryVerification = !(
+                    data.is_email_verified ||
+                    data.is_passwordless ||
+                    data.is_google_verified
+                );
+                response.token = Helper.generateUserAuthToken(
+                    data._id,
+                    data.username,
+                    userInfo.email,
+                    labels.operation,
+                    !response.retryVerification,
+                );
 
-                if(Helper.verifyPassword(userInfo.password, data.password, data.salt)) {
-                    if(data.is_email_verified || data.is_passwordless || data.is_google_verified) {
+                if (
+                    Helper.verifyPassword(
+                        userInfo.password,
+                        data.password,
+                        data.salt,
+                    )
+                ) {
+                    if (
+                        data.is_email_verified ||
+                        data.is_passwordless ||
+                        data.is_google_verified
+                    ) {
                         deviceInfo.user_id = data._id;
-                        
+
                         await utils.logUserDevice(deviceInfo, context, labels);
-                    }
-                    else {
+                    } else {
                         response.message = Constants.LOGIN_MESSAGE.NOT_VERIFIED;
                     }
 
-                    await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
-                        key: redisKey,
-                        value: Helper.serialiseRedisKeyValues(redisEmailValue)
-                    }); 
-                }
-                else {
+                    await queueEmployee.addJobToQueue(
+                        context,
+                        labels,
+                        Constants.DB.SAVE_IN_REDIS,
+                        {
+                            key: redisKey,
+                            value: Helper.serialiseRedisKeyValues(
+                                redisEmailValue,
+                            ),
+                        },
+                    );
+                } else {
                     response.name = Constants.LOGIN_MESSAGE.EMPTY;
-                    response.message = Constants.LOGIN_MESSAGE.WRONG_AUTHENTICATION;
+                    response.message =
+                        Constants.LOGIN_MESSAGE.WRONG_AUTHENTICATION;
                     response.token = Constants.LOGIN_MESSAGE.EMPTY_TOKEN;
                 }
-            }
-            else {
+            } else {
                 response.message = Constants.LOGIN_MESSAGE.NO_CONTENT;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.retryVerification = false;
             }
-        }
-        catch (error) {
-            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
+        } catch (error) {
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(
+                error.message,
+            )
+                ? error.message
+                : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(
+                context.tracerId,
+                Constants.LOKI_LOGGER_LABELS.MODELS,
+            );
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });

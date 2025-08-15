@@ -1,8 +1,7 @@
 export type UserForgotPasswordType = {
-    email: string
+    email: string;
 };
 
 export type GRPCUserForgotPasswordType = {
-    email: string
+    email: string;
 };
-

@@ -1,5 +1,5 @@
-import 'dotenv/config';
-import { Constants } from '../utils/constants.js';
+import "dotenv/config";
+import { Constants } from "../utils/constants.js";
 
 const port = process.env.PORT;
 const serverUrl = process.env.BASE_URL || Constants.SERVER_URL;
@@ -25,7 +25,7 @@ const privateKey = process.env.JWT_PRIVATE_KEY;
 const jwtPublicKey = process.env.JWT_PUBLIC_KEY;
 
 export {
-    port, 
+    port,
     serverUrl,
     dbUsername,
     dbName,

@@ -1,7 +1,14 @@
 import { createClient } from "./imports.js";
 import {
-    cacheDBRedisUsername, cacheDBRedisPassword, cacheDBRedisHost, cacheDBRedisPort, queueDBRedisUsername, queueDBRedisPassword,
-    queueDBRedisHost, queueDBRedisPort, queueDBRedisUrl
+    cacheDBRedisUsername,
+    cacheDBRedisPassword,
+    cacheDBRedisHost,
+    cacheDBRedisPort,
+    queueDBRedisUsername,
+    queueDBRedisPassword,
+    queueDBRedisHost,
+    queueDBRedisPort,
+    queueDBRedisUrl,
 } from "./config.js";
 import { Constants } from "../utils/constants.js";
 
@@ -11,11 +18,11 @@ const cacheDB = createClient({
     socket: {
         host: cacheDBRedisHost,
         port: Number(cacheDBRedisPort),
-    }
+    },
 });
 
 const queueDB = createClient({
-    url: queueDBRedisUrl
+    url: queueDBRedisUrl,
 });
 
 const bullMQConnectionObject = {
@@ -76,9 +83,4 @@ const queueDB = createClient({
 });
 */
 
-export {
-    cacheDB,
-    queueDB,
-    defaultQueueSettings,
-    bullMQConnectionObject,
-};
+export { cacheDB, queueDB, defaultQueueSettings, bullMQConnectionObject };

@@ -1,19 +1,40 @@
 import { uuidv4 } from "../config/imports.js";
 import { DeviceType, GPRCDeviceType } from "../database/types/device_info.js";
-import { ContextType, PasswordlessAuthenticationLabelType } from "../database/types/logger.js";
+import {
+    ContextType,
+    PasswordlessAuthenticationLabelType,
+} from "../database/types/logger.js";
 import { PasswordlessAuthenticationResponse } from "../database/types/response.js";
-import { GPRCPasswordlessAuthenticationType, PasswordlessAuthenticationAuthType, PasswordlessAuthenticationDataType, PasswordlessAuthenticationType } from "../database/types/user_passwordless_authentication.js";
+import {
+    GPRCPasswordlessAuthenticationType,
+    PasswordlessAuthenticationAuthType,
+    PasswordlessAuthenticationDataType,
+    PasswordlessAuthenticationType,
+} from "../database/types/user_passwordless_authentication.js";
 import { userPasswordlessAuthenticationRepositories } from "../database/repositories/user_passwordless_authentication.js";
 import { Helper } from "../utils/helper.js";
 
 interface PasswordlessAuthenticationController {
     mapUserPasswordlessAuthenticationSchema(): PasswordlessAuthenticationType;
-    mapUserDataPasswordlessAuthenticationSchema(userInfo: GPRCPasswordlessAuthenticationType, userId: string): PasswordlessAuthenticationDataType;
-    mapUserAuthPasswordlessAuthenticationSchema(userInfo: GPRCPasswordlessAuthenticationType, userId: string): PasswordlessAuthenticationAuthType;
-    generateUserPasswordlessTokenDetails(userInfo: GPRCPasswordlessAuthenticationType, deviceInfo: GPRCDeviceType, context: ContextType, labels: PasswordlessAuthenticationLabelType): Promise<PasswordlessAuthenticationResponse>;
+    mapUserDataPasswordlessAuthenticationSchema(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        userId: string,
+    ): PasswordlessAuthenticationDataType;
+    mapUserAuthPasswordlessAuthenticationSchema(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        userId: string,
+    ): PasswordlessAuthenticationAuthType;
+    generateUserPasswordlessTokenDetails(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        deviceInfo: GPRCDeviceType,
+        context: ContextType,
+        labels: PasswordlessAuthenticationLabelType,
+    ): Promise<PasswordlessAuthenticationResponse>;
 }
 
-class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthenticationController {
+class PasswordlessAuthenticationControllerImpl
+    implements PasswordlessAuthenticationController
+{
     mapUserPasswordlessAuthenticationSchema(): PasswordlessAuthenticationType {
         return {
             _id: uuidv4(),
@@ -21,7 +42,10 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
         };
     }
 
-    mapUserDataPasswordlessAuthenticationSchema(userInfo: GPRCPasswordlessAuthenticationType, userId: string): PasswordlessAuthenticationDataType {
+    mapUserDataPasswordlessAuthenticationSchema(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        userId: string,
+    ): PasswordlessAuthenticationDataType {
         return {
             _id: uuidv4(),
             email: userInfo.email,
@@ -31,7 +55,10 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
         };
     }
 
-    mapUserAuthPasswordlessAuthenticationSchema(userInfo: GPRCPasswordlessAuthenticationType, userId: string): PasswordlessAuthenticationAuthType {
+    mapUserAuthPasswordlessAuthenticationSchema(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        userId: string,
+    ): PasswordlessAuthenticationAuthType {
         return {
             _id: uuidv4(),
             is_email_verified: false,
@@ -41,17 +68,33 @@ class PasswordlessAuthenticationControllerImpl implements PasswordlessAuthentica
             password: null,
             salt: null,
             user_id: userId,
-        }
+        };
     }
 
-    async generateUserPasswordlessTokenDetails(userInfo: GPRCPasswordlessAuthenticationType, deviceInfo: GPRCDeviceType, context: ContextType, labels: PasswordlessAuthenticationLabelType): Promise<PasswordlessAuthenticationResponse> {
-        const userSchemaInfo: PasswordlessAuthenticationType = this.mapUserPasswordlessAuthenticationSchema();
-        const userDataSchemaInfo: PasswordlessAuthenticationDataType = this.mapUserDataPasswordlessAuthenticationSchema(userInfo, userSchemaInfo._id);
+    async generateUserPasswordlessTokenDetails(
+        userInfo: GPRCPasswordlessAuthenticationType,
+        deviceInfo: GPRCDeviceType,
+        context: ContextType,
+        labels: PasswordlessAuthenticationLabelType,
+    ): Promise<PasswordlessAuthenticationResponse> {
+        const userSchemaInfo: PasswordlessAuthenticationType =
+            this.mapUserPasswordlessAuthenticationSchema();
+        const userDataSchemaInfo: PasswordlessAuthenticationDataType =
+            this.mapUserDataPasswordlessAuthenticationSchema(
+                userInfo,
+                userSchemaInfo._id,
+            );
         const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(deviceInfo);
 
-        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(userSchemaInfo, userDataSchemaInfo, deviceSchemaInfo, context, labels);
+        return userPasswordlessAuthenticationRepositories.generateUserPasswordlessTokenDetails(
+            userSchemaInfo,
+            userDataSchemaInfo,
+            deviceSchemaInfo,
+            context,
+            labels,
+        );
     }
 }
 
-export const passwordlessAuthenticationController = new PasswordlessAuthenticationControllerImpl();
-
+export const passwordlessAuthenticationController =
+    new PasswordlessAuthenticationControllerImpl();

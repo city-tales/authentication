@@ -9,11 +9,21 @@ import { logger } from "../../config/loki.js";
 import { queueEmployee } from "../../utils/workers.js";
 
 interface UserForgotPassword {
-    authenticateEmail(email: string, deviceInfo: DeviceType, context: ContextType, labels: EmailForgotPasswordLabelType): Promise<EmailForgotPasswordResponse>;
+    authenticateEmail(
+        email: string,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailForgotPasswordLabelType,
+    ): Promise<EmailForgotPasswordResponse>;
 }
 
 class UserForgotPasswordImpl implements UserForgotPassword {
-    async authenticateEmail(email: string, deviceInfo: DeviceType, context: ContextType, labels: EmailForgotPasswordLabelType): Promise<EmailForgotPasswordResponse> {
+    async authenticateEmail(
+        email: string,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailForgotPasswordLabelType,
+    ): Promise<EmailForgotPasswordResponse> {
         let response = new EmailForgotPasswordResponse();
 
         const userTableName = Constants.TABLES.USER_DATA_TABLE;
@@ -32,21 +42,44 @@ class UserForgotPasswordImpl implements UserForgotPassword {
         };
 
         try {
-            const queryResponse = await Helper.executeQueryAsyncWithoutLock(context, query, valuesArray, Constants.DB_ERRORS.READ_FAILURE, labels);
+            const queryResponse = await Helper.executeQueryAsyncWithoutLock(
+                context,
+                query,
+                valuesArray,
+                Constants.DB_ERRORS.READ_FAILURE,
+                labels,
+            );
 
-            if (Helper.isSelectQuerySuccessful(queryResponse.command, queryResponse.rows.length)) {
+            if (
+                Helper.isSelectQuerySuccessful(
+                    queryResponse.command,
+                    queryResponse.rows.length,
+                )
+            ) {
                 const data = queryResponse.rows[0];
 
-                if(Helper.isGenericEitherNullOrUndefined(data)) throw new Error(Constants.FORGOT_PASSWORD_MESSAGE.NO_CONTENT);
-                
-                const isEmailVerified = data.is_email_verified || data.is_passwordless || data.is_google_verified;
-                if(!isEmailVerified) throw new Error(Constants.FORGOT_PASSWORD_MESSAGE.NOT_VERIFIED);
-        
+                if (Helper.isGenericEitherNullOrUndefined(data))
+                    throw new Error(
+                        Constants.FORGOT_PASSWORD_MESSAGE.NO_CONTENT,
+                    );
+
+                const isEmailVerified =
+                    data.is_email_verified ||
+                    data.is_passwordless ||
+                    data.is_google_verified;
+                if (!isEmailVerified)
+                    throw new Error(
+                        Constants.FORGOT_PASSWORD_MESSAGE.NOT_VERIFIED,
+                    );
+
                 const userInfoFromData: RedisEmailKeySerialisation = {
                     email: Helper.sanitiseStringValue(email),
                 };
                 const redisKey: string = Helper.serialiseRedisKeyValues(
-                    Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoFromData)
+                    Helper.prepareUserRedisKeyValues(
+                        Constants.SERIALISATION_KEYS.USER,
+                        userInfoFromData,
+                    ),
                 );
                 const redisEmailValue: Object = {
                     _id: data._id,
@@ -59,23 +92,40 @@ class UserForgotPasswordImpl implements UserForgotPassword {
 
                 response.message = Constants.FORGOT_PASSWORD_MESSAGE.SUCCESS;
                 response.statusCode = Constants.STATUS_CODES.OK;
-                response.token = Helper.generateUserAuthToken(data._id, data.username, email, labels.operation, isEmailVerified);
+                response.token = Helper.generateUserAuthToken(
+                    data._id,
+                    data.username,
+                    email,
+                    labels.operation,
+                    isEmailVerified,
+                );
                 response.name = data.name;
 
-                await queueEmployee.addJobToQueue(context, labels, Constants.DB.SAVE_IN_REDIS, {
-                    key: redisKey,
-                    value: Helper.serialiseRedisKeyValues(redisEmailValue)
-                }); 
-            }
-            else {
+                await queueEmployee.addJobToQueue(
+                    context,
+                    labels,
+                    Constants.DB.SAVE_IN_REDIS,
+                    {
+                        key: redisKey,
+                        value: Helper.serialiseRedisKeyValues(redisEmailValue),
+                    },
+                );
+            } else {
                 response.statusCode = Constants.STATUS_CODES.NOT_FOUND;
-                response.message = Constants.FORGOT_PASSWORD_MESSAGE.EMAIL_DO_NOT_EXISTS;
+                response.message =
+                    Constants.FORGOT_PASSWORD_MESSAGE.EMAIL_DO_NOT_EXISTS;
             }
-        }
-        catch (error) {
-            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(error.message) ? error.message : Constants.LOGIN_MESSAGE.FAILED;
+        } catch (error) {
+            response.message = Helper.isNeitherNullNorUndefinedNorEmpty(
+                error.message,
+            )
+                ? error.message
+                : Constants.LOGIN_MESSAGE.FAILED;
 
-            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.MODELS);
+            loggerDefaultParams = Helper.generateDefaultFailureParams(
+                context.tracerId,
+                Constants.LOKI_LOGGER_LABELS.MODELS,
+            );
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });

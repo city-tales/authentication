@@ -1,4 +1,8 @@
-import { AuthDataSignUpType, UserDataSignUpType, UserSignUpType } from "../types/user_signup.js";
+import {
+    AuthDataSignUpType,
+    UserDataSignUpType,
+    UserSignUpType,
+} from "../types/user_signup.js";
 import { userSignUpImpl } from "../models/user_signup.js";
 import { SignUpResponse } from "../types/response.js";
 import { DeviceType } from "../types/device_info.js";
@@ -10,12 +14,27 @@ import { ContextType, EmailSignUpLabelType } from "../types/logger.js";
 import { logger } from "../../config/loki.js";
 
 interface UserSignUpRepository {
-    checkIfUserExists(userInfo: UserDataSignUpType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse>;
-    createUser(userInfo: UserSignUpType, userDataInfo: UserDataSignUpType, authDataSchemaInfo: AuthDataSignUpType, deviceInfo: DeviceType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse>;
+    checkIfUserExists(
+        userInfo: UserDataSignUpType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse>;
+    createUser(
+        userInfo: UserSignUpType,
+        userDataInfo: UserDataSignUpType,
+        authDataSchemaInfo: AuthDataSignUpType,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse>;
 }
 
 class UserSignUpRepositoryImpl implements UserSignUpRepository {
-    async checkIfUserExists(userInfo: UserDataSignUpType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse> {
+    async checkIfUserExists(
+        userInfo: UserDataSignUpType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse> {
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -28,37 +47,66 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
 
         try {
             const redisKey: string = Helper.serialiseRedisKeyValues(
-                Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
+                Helper.prepareUserRedisKeyValues(
+                    Constants.SERIALISATION_KEYS.USER,
+                    userInfoForRedisKey,
+                ),
             );
             const isKeyInRedis = await cacheDB.get(redisKey);
 
             if (Helper.isEitherNullOrUndefinedOrEmpty(isKeyInRedis)) {
                 const userInfoForCheckingExistingUser = {
                     email: Helper.passStringNullParams(userInfo.email),
-                    primary_country_code: Helper.passStringNullParams(userInfo.primary_country_code),
-                    phone_number: Helper.passStringNullParams(userInfo.phone_number),
+                    primary_country_code: Helper.passStringNullParams(
+                        userInfo.primary_country_code,
+                    ),
+                    phone_number: Helper.passStringNullParams(
+                        userInfo.phone_number,
+                    ),
                 };
 
-                const userResponse: SignUpResponse = await userSignUpImpl.checkIfUserExists(userInfoForCheckingExistingUser, userInfo, redisKey, context, labels);
+                const userResponse: SignUpResponse =
+                    await userSignUpImpl.checkIfUserExists(
+                        userInfoForCheckingExistingUser,
+                        userInfo,
+                        redisKey,
+                        context,
+                        labels,
+                    );
                 response = userResponse;
-            }
-            else {
-                const deSerialisedObject = Helper.parseRedisValueToObject(Helper.convertToType<string>(isKeyInRedis, Constants.TYPE_SWITCH.STRING));
+            } else {
+                const deSerialisedObject = Helper.parseRedisValueToObject(
+                    Helper.convertToType<string>(
+                        isKeyInRedis,
+                        Constants.TYPE_SWITCH.STRING,
+                    ),
+                );
 
-                response.token = Helper.generateUserAuthToken(deSerialisedObject._id, deSerialisedObject.username, userInfo.email, labels.operation, deSerialisedObject.isEmailVerified);
+                response.token = Helper.generateUserAuthToken(
+                    deSerialisedObject._id,
+                    deSerialisedObject.username,
+                    userInfo.email,
+                    labels.operation,
+                    deSerialisedObject.isEmailVerified,
+                );
                 response.message = Constants.SIGNUP_MESSAGE.EXISTING_USER;
                 response.statusCode = Constants.STATUS_CODES.OK;
                 response.verified = deSerialisedObject.isEmailVerified;
 
-                loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+                loggerDefaultParams = Helper.generateDefaultSuccessParams(
+                    context.tracerId,
+                    Constants.LOKI_LOGGER_LABELS.REPOSITORIES,
+                );
                 logPayload = { ...logPayload, ...loggerDefaultParams };
                 logPayload = { ...logPayload, ...{ redisKey: redisKey } };
                 logPayload = Helper.logResponse(logPayload, response);
                 logger.info({ ...logPayload });
             }
-        }
-        catch (error) {
-            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+        } catch (error) {
+            loggerDefaultParams = Helper.generateDefaultFailureParams(
+                context.tracerId,
+                Constants.LOKI_LOGGER_LABELS.REPOSITORIES,
+            );
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = { ...logPayload, ...{ userInfo: userInfo } };
             logPayload = Helper.logErrorStack(logPayload, error);
@@ -70,7 +118,14 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
         return response;
     }
 
-    async createUser(userInfo: UserSignUpType, userDataInfo: UserDataSignUpType, authDataSchemaInfo: AuthDataSignUpType, deviceInfo: DeviceType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse> {
+    async createUser(
+        userInfo: UserSignUpType,
+        userDataInfo: UserDataSignUpType,
+        authDataSchemaInfo: AuthDataSignUpType,
+        deviceInfo: DeviceType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse> {
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
         let logPayload = {
@@ -87,14 +142,28 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
 
         try {
             const redisKey: string = Helper.serialiseRedisKeyValues(
-                Helper.prepareUserRedisKeyValues(Constants.SERIALISATION_KEYS.USER, userInfoForRedisKey)
+                Helper.prepareUserRedisKeyValues(
+                    Constants.SERIALISATION_KEYS.USER,
+                    userInfoForRedisKey,
+                ),
             );
 
-            const userResponse: SignUpResponse = await userSignUpImpl.createUser(userInfo, userDataInfo, authDataSchemaInfo, deviceInfo, redisKey, context, labels);
+            const userResponse: SignUpResponse =
+                await userSignUpImpl.createUser(
+                    userInfo,
+                    userDataInfo,
+                    authDataSchemaInfo,
+                    deviceInfo,
+                    redisKey,
+                    context,
+                    labels,
+                );
             response = userResponse;
-        }
-        catch (error) {
-            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.REPOSITORIES);
+        } catch (error) {
+            loggerDefaultParams = Helper.generateDefaultFailureParams(
+                context.tracerId,
+                Constants.LOKI_LOGGER_LABELS.REPOSITORIES,
+            );
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });
@@ -107,4 +176,3 @@ class UserSignUpRepositoryImpl implements UserSignUpRepository {
 }
 
 export const userSignUp = new UserSignUpRepositoryImpl();
-

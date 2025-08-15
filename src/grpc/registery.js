@@ -16,11 +16,10 @@ const rpcServiceMap = {
 };
 
 const registerService = (server) => {
-    server.addService(rpcRequestProto.service.RpcRequestService.service, rpcServiceMap);
+    server.addService(
+        rpcRequestProto.service.RpcRequestService.service,
+        rpcServiceMap,
+    );
 };
 
-export {
-    registerService,
-};
-
-
+export { registerService };

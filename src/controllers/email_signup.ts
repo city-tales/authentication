@@ -3,23 +3,41 @@ import { logger } from "../config/loki.js";
 import { DeviceType, GPRCDeviceType } from "../database/types/device_info.js";
 import { ContextType, EmailSignUpLabelType } from "../database/types/logger.js";
 import { SignUpResponse } from "../database/types/response.js";
-import { AuthDataSignUpType, GPRCUserSignUpType, UserDataSignUpType, UserSignUpType } from "../database/types/user_signup.js";
+import {
+    AuthDataSignUpType,
+    GPRCUserSignUpType,
+    UserDataSignUpType,
+    UserSignUpType,
+} from "../database/types/user_signup.js";
 import { userSignUp } from "../database/repositories/user_signup.js";
 import { Constants } from "../utils/constants.js";
 import { Helper } from "../utils/helper.js";
 
 interface UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpType): UserSignUpType;
-    mapUserDataSchema(userInfo: GPRCUserSignUpType, userId: string): UserDataSignUpType;
-    mapAuthDataSchema(userInfo: GPRCUserSignUpType, userId: string): AuthDataSignUpType;
-    createUser(userInfo: GPRCUserSignUpType, deviceInfo: GPRCDeviceType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse>;
+    mapUserDataSchema(
+        userInfo: GPRCUserSignUpType,
+        userId: string,
+    ): UserDataSignUpType;
+    mapAuthDataSchema(
+        userInfo: GPRCUserSignUpType,
+        userId: string,
+    ): AuthDataSignUpType;
+    createUser(
+        userInfo: GPRCUserSignUpType,
+        deviceInfo: GPRCDeviceType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse>;
 }
 
 class UserSignUpControllerImpl implements UserSignUpController {
     mapUserSchema(userInfo: GPRCUserSignUpType): UserSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
-            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
-        );
+        const sanitisedUserInfo: GPRCUserSignUpType =
+            Helper.convertToType<GPRCUserSignUpType>(
+                Helper.sanitiseObject(userInfo),
+                Constants.TYPE_SWITCH.INTERFACE,
+            );
 
         return {
             _id: uuidv4(),
@@ -27,10 +45,15 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    mapUserDataSchema(userInfo: GPRCUserSignUpType, userId: string): UserDataSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
-            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
-        );
+    mapUserDataSchema(
+        userInfo: GPRCUserSignUpType,
+        userId: string,
+    ): UserDataSignUpType {
+        const sanitisedUserInfo: GPRCUserSignUpType =
+            Helper.convertToType<GPRCUserSignUpType>(
+                Helper.sanitiseObject(userInfo),
+                Constants.TYPE_SWITCH.INTERFACE,
+            );
 
         return {
             _id: uuidv4(),
@@ -47,11 +70,18 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    mapAuthDataSchema(userInfo: GPRCUserSignUpType, userId: string): AuthDataSignUpType {
-        const sanitisedUserInfo: GPRCUserSignUpType = Helper.convertToType<GPRCUserSignUpType>(
-            Helper.sanitiseObject(userInfo), Constants.TYPE_SWITCH.INTERFACE
+    mapAuthDataSchema(
+        userInfo: GPRCUserSignUpType,
+        userId: string,
+    ): AuthDataSignUpType {
+        const sanitisedUserInfo: GPRCUserSignUpType =
+            Helper.convertToType<GPRCUserSignUpType>(
+                Helper.sanitiseObject(userInfo),
+                Constants.TYPE_SWITCH.INTERFACE,
+            );
+        const { salt, hashedPassword } = Helper.generateHashPassword(
+            sanitisedUserInfo.password,
         );
-        const { salt, hashedPassword } = Helper.generateHashPassword(sanitisedUserInfo.password);
 
         return {
             _id: uuidv4(),
@@ -66,11 +96,25 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
     }
 
-    async createUser(userInfo: GPRCUserSignUpType, deviceInfo: GPRCDeviceType, context: ContextType, labels: EmailSignUpLabelType): Promise<SignUpResponse> {
+    async createUser(
+        userInfo: GPRCUserSignUpType,
+        deviceInfo: GPRCDeviceType,
+        context: ContextType,
+        labels: EmailSignUpLabelType,
+    ): Promise<SignUpResponse> {
         const userSchemaInfo: UserSignUpType = this.mapUserSchema(userInfo);
-        const userDataSchemaInfo: UserDataSignUpType = this.mapUserDataSchema(userInfo, userSchemaInfo._id);
-        const authDataSchemaInfo: AuthDataSignUpType = this.mapAuthDataSchema(userInfo, userSchemaInfo._id)
-        const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(deviceInfo, userSchemaInfo._id);
+        const userDataSchemaInfo: UserDataSignUpType = this.mapUserDataSchema(
+            userInfo,
+            userSchemaInfo._id,
+        );
+        const authDataSchemaInfo: AuthDataSignUpType = this.mapAuthDataSchema(
+            userInfo,
+            userSchemaInfo._id,
+        );
+        const deviceSchemaInfo: DeviceType = Helper.mapDeviceSchema(
+            deviceInfo,
+            userSchemaInfo._id,
+        );
 
         let response = new SignUpResponse();
         let loggerDefaultParams = {};
@@ -83,23 +127,41 @@ class UserSignUpControllerImpl implements UserSignUpController {
         };
 
         try {
-            const isExistingUser: SignUpResponse = await userSignUp.checkIfUserExists(userDataSchemaInfo, context, labels);
-            if (isExistingUser.message === Constants.SIGNUP_MESSAGE.EXISTING_USER) {
+            const isExistingUser: SignUpResponse =
+                await userSignUp.checkIfUserExists(
+                    userDataSchemaInfo,
+                    context,
+                    labels,
+                );
+            if (
+                isExistingUser.message ===
+                Constants.SIGNUP_MESSAGE.EXISTING_USER
+            ) {
                 response.token = isExistingUser.token;
                 response.message = isExistingUser.message;
                 response.statusCode = isExistingUser.statusCode;
                 response.verified = isExistingUser.verified;
-            }
-            else if(isExistingUser.message === Constants.SIGNUP_MESSAGE.NOT_VERIFIED) {
+            } else if (
+                isExistingUser.message === Constants.SIGNUP_MESSAGE.NOT_VERIFIED
+            ) {
                 response = isExistingUser;
-            }
-            else {
-                const userResponse: SignUpResponse = await userSignUp.createUser(userSchemaInfo, userDataSchemaInfo, authDataSchemaInfo, deviceSchemaInfo, context, labels);
+            } else {
+                const userResponse: SignUpResponse =
+                    await userSignUp.createUser(
+                        userSchemaInfo,
+                        userDataSchemaInfo,
+                        authDataSchemaInfo,
+                        deviceSchemaInfo,
+                        context,
+                        labels,
+                    );
                 response = userResponse;
             }
-        }
-        catch (error) {
-            loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.CONTROLLER);
+        } catch (error) {
+            loggerDefaultParams = Helper.generateDefaultFailureParams(
+                context.tracerId,
+                Constants.LOKI_LOGGER_LABELS.CONTROLLER,
+            );
             logPayload = { ...logPayload, ...loggerDefaultParams };
             logPayload = Helper.logErrorStack(logPayload, error);
             logger.error({ ...logPayload });

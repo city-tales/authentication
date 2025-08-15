@@ -8,7 +8,7 @@ import { Helper } from "../../utils/helper.js";
 const passwordlessAuthentication = async (call, callback) => {
     const request = call.request;
     const context = {
-        tracerId: call.metadata.internalRepr.get('tracerid')?.[0],
+        tracerId: call.metadata.internalRepr.get("tracerid")?.[0],
     };
     const labels: PasswordlessAuthenticationLabelType = {
         operation: Constants.LOKI_LOGGER_LABELS.PASSWORDLESS,
@@ -23,18 +23,29 @@ const passwordlessAuthentication = async (call, callback) => {
     };
 
     try {
-        const response: PasswordlessAuthenticationResponse = await passwordlessAuthenticationController.generateUserPasswordlessTokenDetails(request.userPasswordlessAuthenticationRequest, request.userDeviceInformation, context, labels);
+        const response: PasswordlessAuthenticationResponse =
+            await passwordlessAuthenticationController.generateUserPasswordlessTokenDetails(
+                request.userPasswordlessAuthenticationRequest,
+                request.userDeviceInformation,
+                context,
+                labels,
+            );
         toRet = response;
 
-        loggerDefaultParams = Helper.generateDefaultSuccessParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultSuccessParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logResponse(logPayload, response);
         logger.info({ ...logPayload });
-    }
-    catch (error) {
+    } catch (error) {
         toRet = error;
 
-        loggerDefaultParams = Helper.generateDefaultFailureParams(context.tracerId, Constants.LOKI_LOGGER_LABELS.HANDLER);
+        loggerDefaultParams = Helper.generateDefaultFailureParams(
+            context.tracerId,
+            Constants.LOKI_LOGGER_LABELS.HANDLER,
+        );
         logPayload = { ...logPayload, ...loggerDefaultParams };
         logPayload = Helper.logErrorStack(logPayload, error);
         logger.error({ ...logPayload });
@@ -45,6 +56,4 @@ const passwordlessAuthentication = async (call, callback) => {
     callback(null, toRet);
 };
 
-export {
-    passwordlessAuthentication
-};
+export { passwordlessAuthentication };
