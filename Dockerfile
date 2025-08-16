@@ -11,5 +11,6 @@ COPY . .
 RUN npm run build
 RUN chmod +x ./start_app.sh && adduser -D app && chown -R app:app /home/authentication
 
-EXPOSE 2221
+# Expose HTTP and gRPC ports
+EXPOSE 2221 5051
 CMD ["./start_app.sh"]
