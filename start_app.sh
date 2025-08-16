@@ -2,4 +2,5 @@
 set -e
 # If you read PORT from env, default to 2221
 : "${PORT:=2221}"
-exec node dist/index.js
+echo "Starting application on port $PORT"
+exec node dist/index.js --port=$PORT
