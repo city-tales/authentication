@@ -1,18 +1,18 @@
 import { grpc } from "../config/imports.js";
-import { serverUrl } from "../config/config.js";
+import { grpcServerUrl, grpcPort } from "../config/config.js";
 import { registerService } from "./registery.js";
 
 const server = new grpc.Server();
 
 registerService(server);
 server.bindAsync(
-    serverUrl,
+    grpcServerUrl,
     grpc.ServerCredentials.createInsecure(),
-    (error, port) => {
+    (error, grpcPort) => {
         if (error) {
             console.log(`GPRC Server not setup ${error}`);
-            return;
+            process.exit(1);
         }
-        console.log(`GPRC Server running on PORT ${port}`);
+        console.log(`GPRC Server running on PORT ${grpcPort}`);
     },
 );

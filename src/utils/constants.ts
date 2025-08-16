@@ -279,9 +279,7 @@ enum TYPE_SWITCH {
 }
 
 export class Constants {
-    static readonly PORT = process.env.port;
     static readonly DB_PORT = "5432";
-    static readonly SERVER_URL = `127.0.0.1:${this.PORT}`;
 
     static readonly DB = DB;
     static readonly QUEUE_DB = QUEUE_DB;
