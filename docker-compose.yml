@@ -1,0 +1,16 @@
+services:
+    auth:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                NODE_VERSION: "20.19.2"
+        image: city-tales/authentication:latest
+        env_file:
+            - ./.env
+        environment:
+            - NODE_ENV=production
+            - PORT=2221 # Explicitly set the port to avoid conflicts
+        ports:
+            - "2221:2221"
+        restart: unless-stopped

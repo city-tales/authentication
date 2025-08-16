@@ -2,6 +2,8 @@ ARG NODE_VERSION=20.19.2
 FROM node:${NODE_VERSION}-alpine3.21
 
 WORKDIR /home/authentication
+
+COPY shared-proto /home/shared-proto
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
