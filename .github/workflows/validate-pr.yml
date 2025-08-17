@@ -1,0 +1,26 @@
+name: Validate PR Branch Name
+
+on:
+    pull_request:
+        branches:
+            - production
+        types: [opened, synchronize, reopened]
+
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: 🛡️ Validate branch name
+              if: ${{ github.event_name != 'workflow_dispatch' }}
+              shell: bash
+              run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                    branch="${{ github.head_ref }}"
+                  else
+                    branch="${GITHUB_REF#refs/heads/}"
+                  fi
+                  bash .github/scripts/validate_branch.sh "$branch"
