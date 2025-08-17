@@ -20,6 +20,11 @@ const registerService = (server) => {
         rpcRequestProto.service.RpcRequestService.service,
         rpcServiceMap,
     );
+
+    console.log(
+        "Registered gRPC handlers:",
+        Object.keys(server.handlers || {}),
+    );
 };
 
 export { registerService };
