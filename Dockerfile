@@ -3,7 +3,6 @@ FROM node:${NODE_VERSION}-alpine3.21
 
 WORKDIR /home/authentication
 
-COPY shared-proto /home/shared-proto
 COPY package*.json ./
 RUN npm ci
 COPY . .
