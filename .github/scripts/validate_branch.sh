@@ -4,7 +4,7 @@
 set -euo pipefail
 
 branch="$1"
-regex='^((feature|hotfix)/ISS-[0-9]+/[a-z0-9]+([-a-z0-9]*[a-z0-9])?|TKT/[a-z0-9_-]+/[0-9]{4}-[0-9]{2}-[0-9]{2})$'
+regex='^(feature/[a-z0-9]+(-[a-z0-9]+)*|feature/ISS-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*|feature/ISS-[0-9]+/(issues|bug|incident)/[a-z0-9]+(-[a-z0-9]+)*|hotfix/[a-z0-9]+(-[a-z0-9]+)*|hotfix/ISS-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*|hotfix/TKT-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*)$'
 
 if [[ "$branch" =~ $regex ]]; then
     echo "✅ Branch name is valid: $branch"
