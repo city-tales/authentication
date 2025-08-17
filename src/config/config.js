@@ -23,7 +23,7 @@ const lokiLoggerName = process.env.LOKI_LOGGER_NAME;
 const lokiLoggerUrl = process.env.LOKI_LOGGER_URL;
 const lokiLoggerUser = process.env.LOKI_LOGGER_USER;
 const lokiLoggerToken = process.env.LOKI_LOGGER_TOKEN;
-const privateKey = process.env.JWT_PRIVATE_KEY;
+const privateKey = process.env.JWT_PRIVATE_KEY.replace(/\\n/g, "\n");
 const jwtPublicKey = process.env.JWT_PUBLIC_KEY;
 
 export {
