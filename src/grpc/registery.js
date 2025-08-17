@@ -21,9 +21,16 @@ const registerService = (server) => {
         rpcServiceMap,
     );
 
+    // grpc-js stores handlers in a Map at server.handlers (internal). Object.keys() on a Map returns [].
+    // This logs the registered method paths if available, otherwise falls back to the map keys we provided.
+    const registered =
+        server && server.handlers && typeof server.handlers.keys === "function"
+            ? Array.from(server.handlers.keys())
+            : Object.keys(rpcServiceMap);
     console.log(
         "Registered gRPC handlers:",
-        Object.keys(server.handlers || {}),
+        `(${registered.length})`,
+        registered,
     );
 };
 

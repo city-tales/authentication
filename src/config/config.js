@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Constants } from "../utils/constants.js";
 
 // gRPC-only service: use PORT for gRPC (default 8080 locally). Bind to 0.0.0.0
-const grpcPort = parseInt(process.env.PORT || "8080", 10);
+const grpcPort = parseInt(process.env.GRPC_PORT || "8080", 10);
 const grpcServerUrl = `0.0.0.0:${grpcPort}`;
 
 const dbUsername = process.env.DB_USERNAME;
