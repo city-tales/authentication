@@ -1,28 +1,8 @@
 import "dotenv/config";
 import { Constants } from "../utils/constants.js";
 
-// Service role selection: 'http' or 'grpc'. Defaults to 'http'.
-const role = (process.env.ROLE || "http").toLowerCase();
-
-// Cloud Run provides PORT for the externally exposed listener
-const cloudRunPort = parseInt(process.env.PORT || "2221", 10);
-
-// Optional explicit side-port envs; otherwise use sane defaults
-const sideHttpPort = parseInt(
-    process.env.HTTP_PORT || process.env.HTTP_SIDE_PORT || "2222",
-    10,
-);
-const sideGrpcPort = parseInt(
-    process.env.GRPC_PORT || process.env.GRPC_SIDE_PORT || "5051",
-    10,
-);
-
-// Decide which server takes the Cloud Run PORT based on ROLE
-const httpPort = role === "http" ? cloudRunPort : sideHttpPort;
-const grpcPort = role === "grpc" ? cloudRunPort : sideGrpcPort;
-
-// Always bind on 0.0.0.0 to be reachable inside the container
-const httpServerUrl = `0.0.0.0:${httpPort}`;
+// gRPC-only service: use PORT for gRPC (default 8080 locally). Bind to 0.0.0.0
+const grpcPort = parseInt(process.env.PORT || "8080", 10);
 const grpcServerUrl = `0.0.0.0:${grpcPort}`;
 
 const dbUsername = process.env.DB_USERNAME;
@@ -47,11 +27,8 @@ const privateKey = process.env.JWT_PRIVATE_KEY;
 const jwtPublicKey = process.env.JWT_PUBLIC_KEY;
 
 export {
-    // role/ports
     grpcPort,
     grpcServerUrl,
-    httpPort,
-    httpServerUrl,
     dbUsername,
     dbName,
     dbHost,
