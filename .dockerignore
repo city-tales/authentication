@@ -23,6 +23,7 @@ npm-debug.log
 node_modules
 **/.DS_Store
 
-# Ignore env file
-.env
-.env*
+# Ignore env file 
+# [commented for testing]
+#.env
+#.env*
