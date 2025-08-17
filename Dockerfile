@@ -5,7 +5,7 @@ WORKDIR /home/authentication
 
 COPY shared-proto /home/shared-proto
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npm ci
 COPY . .
 
 RUN npm run build
