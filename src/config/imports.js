@@ -62,6 +62,8 @@ const options = {
     enums: String,
     defaults: true,
     oneofs: true,
+    // Ensure relative imports like "./device.proto" resolve from the same folder
+    includeDirs: [path.dirname(PROTO_PATH)],
 };
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, options);
