@@ -1,8 +1,14 @@
 #!/bin/sh
 set -e
-# If you read PORT from env, default to 2221
+# Defaults for local/dev; Cloud Run will always provide PORT for the exposed listener
 : "${PORT:=2221}"
+: "${HTTP_PORT:=2222}"
 : "${GRPC_PORT:=5051}"
-echo "Docker HTTP application running on port $PORT"
-echo "Docker gRPC application running on port $GRPC_PORT"
-exec node dist/index.js --port=$PORT --grpcPort=$GRPC_PORT
+: "${ROLE:=http}"
+
+echo "Starting authentication service with ROLE=$ROLE"
+echo "CloudRun/External PORT: $PORT"
+echo "HTTP_PORT: $HTTP_PORT | GRPC_PORT: $GRPC_PORT"
+
+# Node app selects which port to bind for each server based on ROLE via src/config/config.js
+exec node dist/index.js
