@@ -5,7 +5,7 @@ import { winston, createLogger, LokiTransport } from "./imports.js";
 const options = {
     transports: [
         new LokiTransport({
-            host: lokiLoggerUrl!,
+            host: `${lokiLoggerUrl}`,
             labels: {
                 app: Constants.LOKI_LOGGER.APPLICATION,
                 env: Constants.LOKI_LOGGER.DEMOENV, // For local environment
@@ -14,7 +14,7 @@ const options = {
             // json: Helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE),
             basicAuth: `${lokiLoggerUser}:${lokiLoggerToken}`,
             format: winston.format.json(),
-            // replaceTimestamp: true,
+            replaceTimestamp: true,
             onConnectionError: (error) => console.error(error),
         }),
     ],

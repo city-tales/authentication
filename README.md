@@ -74,7 +74,10 @@ A comprehensive, production-ready authentication microservice built with Node.js
 
     ```env
     # Server Configuration
-    PORT=3000
+    PORT=http_port
+    BASE_URL=0.0.0.0:http_port
+    GRPC_PORT=grpc_port
+    GRPC_BASE_URL=0.0.0.0:grpc_port
     NODE_ENV=development
 
     # Database Configuration

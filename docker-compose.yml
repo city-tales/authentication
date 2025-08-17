@@ -1,0 +1,19 @@
+services:
+    auth:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                NODE_VERSION: "20.19.2"
+        image: authentication
+        env_file:
+            - ./.env
+        environment:
+            - NODE_ENV=production
+            - HOST=0.0.0.0
+            - GRPC_PORT=5051
+        ports:
+            - "2221:2221" # HTTP port
+            - "5051:5051" # gRPC port
+        restart: unless-stopped
+        platform: linux/arm64

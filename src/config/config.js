@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { Constants } from "../utils/constants.js";
 
-const port = process.env.PORT;
-const serverUrl = process.env.BASE_URL || Constants.SERVER_URL;
+const grpcPort = process.env.GRPC_PORT;
+const grpcServerUrl = process.env.GRPC_BASE_URL;
+const httpPort = process.env.PORT;
+const httpServerUrl = process.env.BASE_URL;
 const dbUsername = process.env.DB_USERNAME;
 const dbName = process.env.DB_DATABASE;
 const dbHost = process.env.DB_HOST;
@@ -25,8 +27,10 @@ const privateKey = process.env.JWT_PRIVATE_KEY;
 const jwtPublicKey = process.env.JWT_PUBLIC_KEY;
 
 export {
-    port,
-    serverUrl,
+    grpcPort,
+    grpcServerUrl,
+    httpPort,
+    httpServerUrl,
     dbUsername,
     dbName,
     dbHost,
