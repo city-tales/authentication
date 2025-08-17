@@ -5,7 +5,7 @@ services:
             dockerfile: Dockerfile
             args:
                 NODE_VERSION: "20.19.2"
-        image: city-tales/authentication:latest
+        image: city-tales/authentication
         env_file:
             - ./.env
         environment:
