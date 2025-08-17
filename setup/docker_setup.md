@@ -13,26 +13,11 @@ This document explains the Docker configuration for the Authentication Service, 
 
 ## Architecture Overview
 
-The Authentication Service uses a multi-port architecture to handle different types of traffic:
-
-1. **HTTP Server (Port 2221)**: Handles HTTP/1.1 traffic for REST API endpoints
-2. **gRPC Server (Port 5051)**: Handles gRPC (HTTP/2) traffic for internal service communication
+The Authentication Service is gRPC-only and listens on a single port.
 
 ## Port Configuration
 
-### Why Two Ports?
-
-1. **Separation of Concerns**:
-    - **Port 2221 (HTTP)**: For external API communication (REST)
-    - **Port 5051 (gRPC)**: For internal service-to-service communication
-
-2. **Protocol Differences**:
-    - HTTP/1.1 (Port 2221): Better for browser-based clients and external APIs
-    - HTTP/2 (Port 5051): Better for internal microservice communication (lower latency, multiplexing)
-
-3. **Security**:
-    - Different security requirements for external vs internal traffic
-    - Ability to expose only necessary ports to the outside world
+Single port: **8080** (HTTP/2 for gRPC). Cloud Run will set the `PORT` env; locally we default to 8080.
 
 ## Docker Compose
 
@@ -52,10 +37,9 @@ services:
         environment:
             - NODE_ENV=production
             - HOST=0.0.0.0
-            - GRPC_PORT=5051
+            - PORT=8080
         ports:
-            - "2221:2221" # HTTP port
-            - "5051:5051" # gRPC port
+            - "8080:8080" # gRPC port
         restart: unless-stopped
         platform: linux/arm64
 ```
@@ -67,7 +51,7 @@ services:
     - ARM64 platform support (for M1/M2 Macs)
 
 2. **Networking**:
-    - Exposes both HTTP and gRPC ports
+    - Exposes only the gRPC port (8080)
     - Uses host networking for better performance
 
 3. **Health Checks**:
@@ -101,8 +85,8 @@ docker compose down
 ## Troubleshooting
 
 1. **Port Conflicts**:
-    - Ensure ports 2221 and 5051 are not in use
-    - Check with: `lsof -i :2221,5051`
+    - Ensure port 8080 is not in use
+    - Check with: `lsof -i :8080`
 
 2. **Container Fails to Start**:
     - Check logs: `docker compose logs auth`

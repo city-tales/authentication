@@ -70,14 +70,12 @@ A comprehensive, production-ready authentication microservice built with Node.js
     ```
 
 3. **Environment Setup**
-   Create a `.env` file in the root directory:
+   Create a `.env` file in the root directory (gRPC-only service):
 
     ```env
-    # Server Configuration
-    PORT=http_port
-    BASE_URL=0.0.0.0:http_port
-    GRPC_PORT=grpc_port
-    GRPC_BASE_URL=0.0.0.0:grpc_port
+    # Server Configuration (Cloud Run will provide PORT). Locally default to 8080
+    GRPC_PORT=8080
+    GRPC_BASE_URL=0.0.0.0
     NODE_ENV=development
 
     # Database Configuration
@@ -247,16 +245,17 @@ The service integrates with Grafana Loki for centralized logging:
 4. **Build**: Run `npm run build`
 5. **Start**: Run `npm start`
 
-### Docker Deployment
+### Docker Deployment (gRPC-only)
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
-COPY dist ./dist
-EXPOSE 3000
-CMD ["npm", "start"]
+COPY . .
+RUN npm run build
+EXPOSE 5051
+CMD ["node", "dist/index.js"]
 ```
 
 ## 🧪 Testing
