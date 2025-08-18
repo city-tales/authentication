@@ -5,6 +5,7 @@ import { emailVerification } from "./handlers/email_verification.js";
 import { passwordlessAuthentication } from "./handlers/passwordless_authentication.js";
 import { googleAuthentication } from "./handlers/google_authentication.js";
 import { emailForgotPassword } from "./handlers/email_forgot_password.js";
+import { healthCheck } from "./handlers/healthCheck.js";
 
 const rpcServiceMap = {
     EmailLogin: emailLogin,
