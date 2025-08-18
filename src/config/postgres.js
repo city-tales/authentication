@@ -9,9 +9,7 @@ const pool = new Pool({
     database: dbName,
     password: dbPassword,
     port: Number(dbPort) || Constants.DB_PORT,
-    ssl: NetworkHelper.isProdEnv()
-        ? { rejectUnauthorized: true }
-        : { rejectUnauthorized: false },
+    ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: Constants.DB_TIMEOUTS.CONNECTION_TIMEOUT,
     idleTimeoutMillis: Constants.DB_TIMEOUTS.IDLE_TIMEOUT,
     query_timeout: Constants.DB_TIMEOUTS.QUERY_TIMEOUT,
