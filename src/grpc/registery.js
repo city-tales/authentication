@@ -13,6 +13,7 @@ const rpcServiceMap = {
     PasswordlessAuthentication: passwordlessAuthentication,
     GoogleAuthentication: googleAuthentication,
     EmailForgotPassword: emailForgotPassword,
+    HealthCheck: healthCheck,
 };
 
 const registerService = (server) => {
