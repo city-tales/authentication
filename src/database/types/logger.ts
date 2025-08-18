@@ -48,6 +48,11 @@ export type RegisterWorkerLabelType = {
     type: string;
 };
 
+export type HealthCheckLabelType = {
+    operation: string;
+    type: string;
+};
+
 export type GenericLabelType =
     | ContextType
     | EmailSignUpLabelType
@@ -56,4 +61,5 @@ export type GenericLabelType =
     | PasswordlessAuthenticationLabelType
     | GoogleAuthenticationLabelType
     | AddJobToQueueLabelType
-    | RegisterWorkerLabelType;
+    | RegisterWorkerLabelType
+    | HealthCheckLabelType;
