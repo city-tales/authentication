@@ -20,6 +20,8 @@ enum QUEUE_DB {
 }
 
 enum DB_TIMEOUTS {
+    PROD_REDIS_MAX_CONNECTIONS = 3,
+    DEMO_REDIS_MAX_CONNECTIONS = 15,
     CONNECTION_TIMEOUT = 10000,
     QUERY_TIMEOUT = 10000,
     LOCK_TIMEOUT = 10000,
@@ -109,6 +111,8 @@ enum JWT_CONFIG {
 
 enum DEV_CONTROLLER {
     SWTICH_OFF_REDIS = "false",
+    PRODUCTION = "production",
+    DEMO = "demo",
 }
 
 enum TABLES {

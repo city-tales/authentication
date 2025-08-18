@@ -1,4 +1,5 @@
 import { Constants } from "../utils/constants.js";
+import { NetworkHelper } from "../utils/network.js";
 import { lokiLoggerToken, lokiLoggerUrl, lokiLoggerUser } from "./config.js";
 import { winston, createLogger, LokiTransport } from "./imports.js";
 
@@ -8,10 +9,10 @@ const options = {
             host: `${lokiLoggerUrl}`,
             labels: {
                 app: Constants.LOKI_LOGGER.APPLICATION,
-                env: Constants.LOKI_LOGGER.DEMOENV, // For local environment
-                // env: Constants.LOKI_LOGGER.PRODENV, // For prod environment
-            }, // default labels
-            // json: Helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE),
+                env: NetworkHelper.isProdEnv()
+                    ? Constants.LOKI_LOGGER.PRODENV
+                    : Constants.LOKI_LOGGER.DEMOENV,
+            },
             basicAuth: `${lokiLoggerUser}:${lokiLoggerToken}`,
             format: winston.format.json(),
             replaceTimestamp: true,

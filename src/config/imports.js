@@ -29,16 +29,19 @@ const __dirname = path.dirname(__filename);
 const protoCandidates = [
     // When running from src (ts-node or node with ES modules)
     path.resolve(__dirname, "../shared-proto/authentication/rpc_request.proto"),
+
     // When running from dist after build
     path.resolve(
         __dirname,
         "../../shared-proto/authentication/rpc_request.proto",
     ),
+
     // From project root current working directory
     path.resolve(
         process.cwd(),
         "shared-proto/authentication/rpc_request.proto",
     ),
+
     // Dockerfile copies shared-proto to /home/shared-proto
     "/home/shared-proto/authentication/rpc_request.proto",
 ];
@@ -62,6 +65,7 @@ const options = {
     enums: String,
     defaults: true,
     oneofs: true,
+
     // Ensure relative imports like "./device.proto" resolve from the same folder
     includeDirs: [path.dirname(PROTO_PATH)],
 };
