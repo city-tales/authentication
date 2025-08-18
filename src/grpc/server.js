@@ -16,6 +16,5 @@ server.bindAsync(
         console.log(
             `gRPC server running on ${grpcServerUrl} (bound PORT ${boundPort})`,
         );
-        server.start();
     },
 );

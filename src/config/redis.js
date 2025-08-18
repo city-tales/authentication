@@ -25,13 +25,9 @@ const cacheDB = createClient({
     },
 });
 
+/* Url must comply TLS */
 const queueDB = createClient({
     url: queueDBRedisUrl,
-    socket: {
-        tls: {
-            rejectUnauthorized: NetworkHelper.isProdEnv(),
-        },
-    },
 });
 
 const bullMQConnectionObject = {
