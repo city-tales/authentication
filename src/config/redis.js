@@ -11,6 +11,7 @@ import {
     queueDBRedisUrl,
 } from "./config.js";
 import { Constants } from "../utils/constants.js";
+import { NetworkHelper } from "../utils/network.js";
 
 const cacheDB = createClient({
     username: cacheDBRedisUsername,
@@ -18,11 +19,19 @@ const cacheDB = createClient({
     socket: {
         host: cacheDBRedisHost,
         port: Number(cacheDBRedisPort),
+        tls: {
+            rejectUnauthorized: NetworkHelper.isProdEnv(),
+        },
     },
 });
 
 const queueDB = createClient({
     url: queueDBRedisUrl,
+    socket: {
+        tls: {
+            rejectUnauthorized: NetworkHelper.isProdEnv(),
+        },
+    },
 });
 
 const bullMQConnectionObject = {
@@ -30,8 +39,12 @@ const bullMQConnectionObject = {
         host: queueDBRedisHost,
         port: queueDBRedisPort,
         password: queueDBRedisPassword,
-        tls: {},
-        // maxRetriesPerRequest: null,
+        tls: {
+            rejectUnauthorized: NetworkHelper.isProdEnv(),
+        },
+        maxRetriesPerRequest: NetworkHelper.isProdEnv()
+            ? Constants.DB_TIMEOUTS.PROD_REDIS_MAX_CONNECTIONS
+            : Constants.DB_TIMEOUTS.DEMO_REDIS_MAX_CONNECTIONS,
     },
 };
 

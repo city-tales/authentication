@@ -5,6 +5,7 @@ import { Constants } from "../utils/constants.js";
 const grpcPort = parseInt(process.env.GRPC_PORT || "8080", 10);
 const grpcServerUrl = `0.0.0.0:${grpcPort}`;
 
+const nodeEnv = process.env.NODE_ENV;
 const dbUsername = process.env.DB_USERNAME;
 const dbName = process.env.DB_DATABASE;
 const dbHost = process.env.DB_HOST;
@@ -29,6 +30,7 @@ const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, "\n");
 export {
     grpcPort,
     grpcServerUrl,
+    nodeEnv,
     dbUsername,
     dbName,
     dbHost,
