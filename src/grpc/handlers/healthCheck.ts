@@ -24,7 +24,7 @@ const healthCheck = async (call, callback) => {
     try {
         let response: HealthCheckResponse = {
             statusCode: Constants.STATUS_CODES.OK,
-            message: request.message,
+            message: request.service,
             service: Constants.HEALTH_CHECK.SERVICE,
         };
         toRet = response;
