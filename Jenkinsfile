@@ -20,6 +20,17 @@ pipeline {
             }
         }
 
+        stage('Checkout submodules') {
+        steps {
+                // ensure submodules are in sync and fetched
+                sh '''
+                git submodule sync --recursive
+                git submodule update --init --recursive --depth 1
+                git submodule status --recursive
+                '''
+            }
+        }
+
         stage('Generate Configs from Vault') {
             steps {
                 withCredentials([string(credentialsId: 'doppler-token', variable: 'DOPPLER_TOKEN')]) {
