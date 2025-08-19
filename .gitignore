@@ -1,5 +1,6 @@
 /node_modules
 /.vscode
 /.env
+/env.json
 /dist
 /src/database/db_migrations
