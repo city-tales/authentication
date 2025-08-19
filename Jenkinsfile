@@ -6,14 +6,15 @@ pipeline {
         REGION       = "us-central1"
         REPO_NAME    = "authentication"    // Artifact Registry repo name
         SERVICE      = "authentication"
-        IMAGE        = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/auth-grpc"
+        IMAGE        = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/authentication"
         BRANCH_NAME  = env.BRANCH_NAME ?: "production"
     }
 
     stages {
         stage('Generate Configs from Vault') {
             steps {
-                sh "doppler run -- cat > .env"
+                // Fetch secrets from Doppler and save into .env
+                sh "doppler secrets download --no-file --format env > .env"
             }
         }
 
@@ -21,9 +22,18 @@ pipeline {
             steps {
                 sh """
                 for var in \$(cat required_envs.txt); do
-                    grep "\$var" .env || (echo "❌ Missing \$var" && exit 1)
+                    grep "^\\$var=" .env || (echo "❌ Missing \\$var" && exit 1)
                 done
                 echo '✅ All required environment variables found'
+                """
+            }
+        }
+
+        stage('Convert ENV to YAML') {
+            steps {
+                sh """
+                sed 's/^\\([^=]*\\)=\\(.*\\)$/\\1: "\\2"/' .env > env.yaml
+                echo '✅ env.yaml generated for Cloud Run'
                 """
             }
         }
@@ -57,7 +67,14 @@ pipeline {
                         --image $IMAGE_TAG \
                         --region $REGION \
                         --platform managed \
-                        --allow-unauthenticated
+                        --allow-unauthenticated \
+                        --port=8080 \
+                        --use-http2 \
+                        --cpu=1 \
+                        --memory=512Mi \
+                        --min-instances=0 \
+                        --max-instances=1 \
+                        --env-vars-file env.yaml
                     """
                 }
             }

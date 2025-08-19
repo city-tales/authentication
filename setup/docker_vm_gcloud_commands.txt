@@ -1,0 +1,113 @@
+Cloud-Shell must have write permission in Artifact-Registery 
+    [
+        gcloud projects add-iam-policy-binding city-tales-authentication \
+            --member="user:developerriyansh@gmail.com" \
+            --role="roles/artifactregistry.writer"
+    ]
+
+1. Create a google cloud project and login in the shell. [Command: gcloud cloud-shell ssh] [Connect to gcloud cloud shell]
+2. Authenticate [gcloud auth login] -> Y -> paste the token from the browser
+3. Create an empty VM [
+        gcloud compute instances create authentication-vm \
+            --zone=us-central1-a \
+            --machine-type=e2-micro \
+            --image-family=debian-12 --image-project=debian-cloud \
+            --boot-disk-size=20GB \
+            --no-address \
+            --tags=auth-svc \
+            --metadata=startup-script='#!/bin/bash
+            set -euxo pipefail
+            apt-get update
+            apt-get install -y docker.io git
+            systemctl enable --now docker
+            '
+    ]
+4. Give internet access to VM [Command: gcloud compute instances add-access-config authentication-vm --zone=us-central1-a]
+
+
+** gcloud compute instances list --project=city-tales-authentication ** [Check VM Status]
+
+5. Create Firewall Ports for VM [Command: 
+        gcloud compute firewall-rules create authentication-ports \
+            --allow=tcp:8080 \
+            --target-tags=auth-svc \
+            --direction=INGRESS \
+            --network=default
+    ]
+6. Give TCP Port 22 access to VM [Command:
+        gcloud compute firewall-rules create allow-my-ssh \
+            --network=default \
+            --allow=tcp:22 \
+            --source-ranges=$(curl -s ifconfig.me)/32
+    ]
+7. Add Firewall to connect VM via cloud-shell [Command:
+    gcloud compute firewall-rules create allow-ssh-iap \
+        --network=default \
+        --allow=tcp:22 \
+        --source-ranges=35.235.240.0/20 \
+        --direction=INGRESS \
+        --priority=1000 \
+        --target-tags=ssh
+]
+8. Tag VM to apply changes [Command:
+    gcloud compute instances add-tags authentication-vm \
+        --zone=us-central1-a \
+        --tags=ssh
+]
+9. Connect to VM For Command refer [Compute Enginer --> VM --> SSH[Click on Gcloud Command]] [Command: 
+        gcloud compute ssh --zone "us-central1-a" "authentication-vm" --tunnel-through-iap --project    "city-tales-authentication"
+    ]
+10. Install packages in VM
+    - sudo apt-get update [Get VM Ready - VM]
+    - sudo apt-get install -y git [Install git - VM]
+    - sudo apt-get install -y docker.io [Install docker VM]
+    - sudo systemctl enable --now docker [Enable Docker VM]
+11. Git Initialisation in VM
+    - git clone https://github.com/city-tales/authentication.git [Clone Repo]
+    - cd authentication 
+    - git submodule init [shared-proto Initialisation]
+    - git submodule update [Copy shared-proto contents]
+12. Docker Build
+    - sudo docker build -t authentication:latest . [Build docker command]
+    - curl -Ls https://cli.doppler.com/install.sh | sudo sh [Install Doppler for secret management]
+    - doppler login [Authenticate Doppler]
+    - doppler secrets download --no-file --format env-no-quotes > .env [Inject env]
+    - sudo docker run -d --env-file .env -p 8080:8080 authentication:latest [Run docker in detached mode]
+    - sudo docker ps -a [Check running images]
+    - sudo docker logs -f <Container-id> [Check Docker Logs]
+13. Download Google Cloud CLI
+    - sudo apt-get update && sudo apt-get install -y google-cloud-cli [Install Google Cloud CLI]
+    - gcloud login [Authenticate in VM]
+    - gcloud compute instances describe authentication-vm --zone=us-central1-a --format='get(networkInterfaces[0].accessConfigs[0].natIP)' [Check VM IP ADDRESS]
+    - gcloud auth configure-docker us-central1-docker.pkg.dev -q [Update Docker VM Creds]
+    - gcloud config set account "$(gcloud auth list --format='value(account)' | grep -v compute@developer.gserviceaccount.com | head -n1)" [Set Account Config on VM]
+    - sudo gcloud auth configure-docker us-central1-docker.pkg.dev -q [Configure Docker creds as root user]
+    - sudo docker tag authentication:latest us-central1-docker.pkg.dev/$(gcloud config get-value project)/authentication/authentication:latest [Tag Docker Image]
+    - sudo docker push us-central1-docker.pkg.dev/$(gcloud config get-value project)/authentication/authentication:latest
+
+    - sudo mkdir -p /root/.docker 
+    - sudo cp /home/developerriyansh/.docker/config.json /root/.docker/ [Copy Docker creds to VM Manually]
+    - sudo usermod -aG docker $USER [Give User permission to Docker]
+    - docker push us-central1-docker.pkg.dev/city-tales-authentication/authentication/authentication:latest [Push to Artifact Registery]
+
+    
+    - export FULL_IMAGE="us-central1-docker.pkg.dev/$(gcloud config get-value project)/authentication/authentication:latest"
+    - docker tag authentication:latest "$FULL_IMAGE"
+    - docker push "$FULL_IMAGE"
+
+    - sed 's/^\([^=]*\)=\(.*\)$/\1: "\2"/' .env > env.yaml [Prepare .env file to .yaml format]
+    - Cloud Run Deployment
+    [
+        gcloud run deploy authentication \
+            --image="$FULL_IMAGE" \
+            --region=us-central1 \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8080 \
+            --use-http2 \
+            --cpu=1 \
+            --memory=512Mi \
+            --min-instances=0 \
+            --max-instances=1 \
+            --env-vars-file env.yaml
+    ]

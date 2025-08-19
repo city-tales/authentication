@@ -26,3 +26,28 @@ CACHE_DB_REDIS_PASSWORD=<your_redis_password>
 CACHE_DB_REDIS_HOST=<your_redis_host>
 CACHE_DB_REDIS_PORT=<your_redis_port>
 ```
+
+## Environment-based roles/databases (NODE_ENV)
+
+To isolate cache data across environments (development, staging, production):
+
+- Prefer using separate Redis databases/instances or users per environment.
+- Configure credentials in `.env` based on `NODE_ENV`.
+- Optionally use environment-specific key prefixes to avoid collisions.
+
+### Recommended ENV variables per environment
+
+```env
+NODE_ENV=development|staging|production
+CACHE_DB_REDIS_USERNAME=<env-specific-username>
+CACHE_DB_REDIS_PASSWORD=<env-specific-password>
+CACHE_DB_REDIS_HOST=<host>
+CACHE_DB_REDIS_PORT=<port>
+```
+
+### Key prefixing example (pseudo-code)
+
+```ts
+const env = process.env.NODE_ENV || "demo";
+const key = `${env}:auth:session:${userId}`;
+```

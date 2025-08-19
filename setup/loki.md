@@ -45,20 +45,47 @@ Now that you have Loki enabled and a custom API token with write access, you can
 const options = {
     transports: [
         new LokiTransport({
-            host: lokiLoggerUrl!,
+            host: `${lokiLoggerUrl}`,
             labels: {
                 app: Constants.LOKI_LOGGER.APPLICATION,
-                env: Constants.LOKI_LOGGER.DEMOENV, // For local environment
-                // env: Constants.LOKI_LOGGER.PRODENV, // For prod environment
-            }, // default labels
-            // json: Helper.convertToType<boolean>(Constants.BOOLEAN_VALUES.TRUE),
+                env: NetworkHelper.isProdEnv()
+                    ? Constants.LOKI_LOGGER.PRODENV
+                    : Constants.LOKI_LOGGER.DEMOENV,
+            },
             basicAuth: `${lokiLoggerUser}:${lokiLoggerToken}`,
             format: winston.format.json(),
-            // replaceTimestamp: true,
+            replaceTimestamp: true,
             onConnectionError: (error) => console.error(error),
         }),
-    ]
+    ],
 };
 
 export const logger = createLogger(options);
+```
+
+## 6. Environment-based roles (NODE_ENV)
+
+To keep logs separated and access-scoped per environment, use NODE_ENV-aware configuration:
+
+- Create separate Loki access policies/tokens per environment (e.g., dev, staging, production) with least-privilege write access.
+- Store each token in your environment variables and select at runtime based on `NODE_ENV`.
+- Add the environment as a label so queries can easily filter logs per environment.
+
+Required ENV variables (see `required_envs.txt` and `src/config/config.js`):
+
+```
+NODE_ENV=demo|production
+LOKI_LOGGER_NAME=<app-name>
+LOKI_LOGGER_URL=<loki-endpoint-url>
+LOKI_LOGGER_USER=<loki-username-if-required>
+LOKI_LOGGER_TOKEN=<loki-token-for-current-NODE_ENV>
+```
+
+Label recommendation in code:
+
+```ts
+labels: {
+  app: Constants.LOKI_LOGGER.APPLICATION,
+  env: process.env.NODE_ENV || "demo",
+}
 ```
