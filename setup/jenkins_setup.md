@@ -175,9 +175,10 @@ The pipeline uses these IDs exactly inside the `Jenkinsfile` via `withCredential
 
 Below is an example Blue Ocean view of a successful run across all stages:
 
-![Jenkins Blue Ocean Pipeline](./assets/jenkins-pipeline-blueocean.png)
+<img width="1439" height="781" alt="Screenshot 2025-08-20 at 12 45 12 AM" src="https://github.com/user-attachments/assets/2fa6a203-04b4-41b9-8b35-07c894bc0bf9" />
 
-> If the image doesn't render, place your screenshot at `setup/assets/jenkins-pipeline-blueocean.png`.
+Below is an example Blue Ocean view of a pipeline run across all builds:
+<img width="1097" height="551" alt="Screenshot 2025-08-20 at 12 44 56 AM" src="https://github.com/user-attachments/assets/05ebf031-2956-495e-a6ee-003661427f63" />
 
 ---
 
