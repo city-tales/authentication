@@ -42,8 +42,12 @@ pipeline {
         stage('Convert ENV to YAML') {
             steps {
                 sh '''
-                sed 's/=/: "/' .env | sed 's/$/"/' > env.yaml
+                sed -E -e 's/\\\\/\\\\\\\\/g' \
+                    -e 's/"/\\\\"/g' \
+                    -e 's/^export[[:space:]]+//' \
+                    -e 's/^([^=]+)=(.*)$/\\1: "\\2"/' .env > env.yaml
                 echo "✅ env.yaml generated for Cloud Run"
+                head -n 20 env.yaml
                 '''
             }
         }
