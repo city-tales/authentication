@@ -29,4 +29,13 @@ After your Redis database is created, you will be provided with the **Redis Conn
    QUEUE_DB_REDIS_PASSWORD =
    QUEUE_DB_REDIS_HOST =
    QUEUE_DB_REDIS_PORT =
+   NODE_ENV=demo|production
 ```
+
+## Environment-based queues (NODE_ENV)
+
+For isolation and least-privilege access, configure queue infrastructure per environment:
+
+- Use separate Upstash databases (or at least separate credentials) for dev/staging/prod.
+- Switch credentials via `.env` based on `NODE_ENV`.
+- Prefix queue names/keys by environment to avoid collisions.

@@ -24,6 +24,5 @@ node_modules
 **/.DS_Store
 
 # Ignore env file 
-# [commented for testing]
-#.env
-#.env*
+.env
+.env*
