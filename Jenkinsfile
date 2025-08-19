@@ -8,9 +8,8 @@ pipeline {
         SERVICE      = "authentication"
         IMAGE        = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/authentication"
 
-        // Use env var BRANCH_NAME from Jenkins or fallback to production
+        // Branch handling
         RAW_BRANCH   = env.BRANCH_NAME ?: "production"
-        // Replace slashes with dashes so Docker accepts it
         SAFE_BRANCH  = "${RAW_BRANCH.replaceAll('/', '-')}"
     }
 
@@ -37,7 +36,7 @@ pipeline {
         stage('Convert ENV to YAML') {
             steps {
                 sh '''
-                sed 's/^\([^=]*\)=\(.*\)$/\1: "\2"/' .env > env.yaml
+                sed 's/^\([^=]*\)=\(.*\)$/\1: "\\2"/' .env > env.yaml
                 echo "✅ env.yaml generated for Cloud Run"
                 '''
             }
@@ -47,7 +46,10 @@ pipeline {
             steps {
                 script {
                     env.IMAGE_TAG = "${IMAGE}:${SAFE_BRANCH}-${BUILD_NUMBER}"
-                    sh "docker build -t ${env.IMAGE_TAG} ."
+                    // Ensure Docker runs from repo root
+                    dir(env.WORKSPACE) {
+                        sh "docker build -t $IMAGE_TAG ."
+                    }
                 }
             }
         }
@@ -55,11 +57,11 @@ pipeline {
         stage('Push to Artifact Registry') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh '''
+                    sh """
                       gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                       gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-                      docker push ${IMAGE_TAG}
-                    '''
+                      docker push $IMAGE_TAG
+                    """
                 }
             }
         }
@@ -67,9 +69,9 @@ pipeline {
         stage('Deploy to Cloud Run') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh '''
+                    sh """
                       gcloud run deploy ${SERVICE} \
-                        --image ${IMAGE_TAG} \
+                        --image $IMAGE_TAG \
                         --region ${REGION} \
                         --platform managed \
                         --allow-unauthenticated \
@@ -80,7 +82,7 @@ pipeline {
                         --min-instances=0 \
                         --max-instances=1 \
                         --env-vars-file env.yaml
-                    '''
+                    """
                 }
             }
         }
