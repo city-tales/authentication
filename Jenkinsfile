@@ -7,7 +7,8 @@ pipeline {
         REPO_NAME    = "authentication"    // Artifact Registry repo name
         SERVICE      = "authentication"
         IMAGE        = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/authentication"
-        BRANCH_NAME  = env.BRANCH_NAME ?: "production"
+        // BRANCH_NAME  = env.BRANCH_NAME ?: "production"
+        BRANCH_NAME  = "feature/TKT-76/jenkins-vm-setup"
     }
 
     stages {
@@ -31,10 +32,10 @@ pipeline {
 
         stage('Convert ENV to YAML') {
             steps {
-                sh '''
-                sed 's/^\([^=]*\)=\(.*\)$/\1: "\2"/' .env > env.yaml
+                sh """
+                sed 's/^\\([^=]*\\)=\\(.*\\)\$/\\1: "\\2"/' .env > env.yaml
                 echo "✅ env.yaml generated for Cloud Run"
-                '''
+                """
             }
         }
 

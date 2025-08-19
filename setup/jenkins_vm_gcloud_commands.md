@@ -45,3 +45,9 @@ gcloud compute instances add-tags authentication-vm \
 11. sudo systemctl status jenkins -l [Check Jenkins Server]
 12. sudo cat /var/lib/jenkins/secrets/initialAdminPassword [Get Jenkins Initial Password]
 13. Install BlueOcean, Git, Pipeline Stage View
+14. Check VM IP
+    [
+    gcloud compute instances describe authentication-vm \
+     --zone=us-central1-a \
+     --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+    ]
