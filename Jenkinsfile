@@ -20,21 +20,21 @@ pipeline {
 
         stage('Validate Configs') {
             steps {
-                sh """
-                for var in \$(cat required_envs.txt); do
-                    grep "^\\$var=" .env || (echo "❌ Missing \\$var" && exit 1)
+                sh '''
+                for var in $(cat required_envs.txt); do
+                    grep "^${var}=" .env || (echo "❌ Missing ${var}" && exit 1)
                 done
-                echo '✅ All required environment variables found'
-                """
+                echo "✅ All required environment variables found"
+                '''
             }
         }
 
         stage('Convert ENV to YAML') {
             steps {
-                sh """
-                sed 's/^\\([^=]*\\)=\\(.*\\)$/\\1: "\\2"/' .env > env.yaml
-                echo '✅ env.yaml generated for Cloud Run'
-                """
+                sh '''
+                sed 's/^\([^=]*\)=\(.*\)$/\1: "\2"/' .env > env.yaml
+                echo "✅ env.yaml generated for Cloud Run"
+                '''
             }
         }
 
@@ -50,11 +50,11 @@ pipeline {
         stage('Push to Artifact Registry') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh """
+                    sh '''
                       gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                       gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
                       docker push $IMAGE_TAG
-                    """
+                    '''
                 }
             }
         }
@@ -62,7 +62,7 @@ pipeline {
         stage('Deploy to Cloud Run') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh """
+                    sh '''
                       gcloud run deploy $SERVICE \
                         --image $IMAGE_TAG \
                         --region $REGION \
@@ -75,7 +75,7 @@ pipeline {
                         --min-instances=0 \
                         --max-instances=1 \
                         --env-vars-file env.yaml
-                    """
+                    '''
                 }
             }
         }
