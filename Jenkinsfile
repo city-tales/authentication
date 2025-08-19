@@ -43,17 +43,17 @@ pipeline {
       steps {
         sh '''
           python3 - <<'PY'
-import json, sys, io, re
-from pathlib import Path
+                import json, sys, io, re
+                from pathlib import Path
 
-env = json.loads(Path("env.json").read_text(encoding="utf-8"))
-required = [line.strip() for line in Path("required_envs.txt").read_text(encoding="utf-8").splitlines() if line.strip()]
-missing = [k for k in required if k not in env]
-if missing:
-    print("❌ Missing keys:", ", ".join(missing))
-    sys.exit(1)
-print("✅ All required environment variables found in env.json")
-PY
+                env = json.loads(Path("env.json").read_text(encoding="utf-8"))
+                required = [line.strip() for line in Path("required_envs.txt").read_text(encoding="utf-8").splitlines() if line.strip()]
+                missing = [k for k in required if k not in env]
+                if missing:
+                    print("❌ Missing keys:", ", ".join(missing))
+                    sys.exit(1)
+                print("✅ All required environment variables found in env.json")
+                PY
         '''
       }
     }
@@ -63,33 +63,33 @@ PY
       steps {
         sh '''
           python3 - <<'PY'
-import json
-from pathlib import Path
+                import json
+                from pathlib import Path
 
-env = json.loads(Path("env.json").read_text(encoding="utf-8"))
+                env = json.loads(Path("env.json").read_text(encoding="utf-8"))
 
-def normalize(v: str) -> str:
-    # Ensure values are strings, strip CR, turn real newlines into literal \\n
-    s = str(v).replace("\\r", "")
-    s = s.replace("\\n", "\\n")  # if JSON already has \\n, it stays; if real newline, becomes \\n
-    return s
+                def normalize(v: str) -> str:
+                    # Ensure values are strings, strip CR, turn real newlines into literal \\n
+                    s = str(v).replace("\\r", "")
+                    s = s.replace("\\n", "\\n")  # if JSON already has \\n, it stays; if real newline, becomes \\n
+                    return s
 
-# Write .env for docker --env-file (no quotes)
-lines_env = []
-for k, v in env.items():
-    lines_env.append(f"{k}={normalize(v)}")
-Path(".env").write_text("\\n".join(lines_env) + "\\n", encoding="utf-8")
+                # Write .env for docker --env-file (no quotes)
+                lines_env = []
+                for k, v in env.items():
+                    lines_env.append(f"{k}={normalize(v)}")
+                Path(".env").write_text("\\n".join(lines_env) + "\\n", encoding="utf-8")
 
-# Write env.yaml for Cloud Run --env-vars-file using single quotes
-# In YAML single-quoted scalars, backslashes are literal; single quote must be doubled.
-lines_yaml = []
-for k, v in env.items():
-    s = normalize(v).replace("'", "''")
-    lines_yaml.append(f"{k}: '{s}'")
-Path("env.yaml").write_text("\\n".join(lines_yaml) + "\\n", encoding="utf-8")
+                # Write env.yaml for Cloud Run --env-vars-file using single quotes
+                # In YAML single-quoted scalars, backslashes are literal; single quote must be doubled.
+                lines_yaml = []
+                for k, v in env.items():
+                    s = normalize(v).replace("'", "''")
+                    lines_yaml.append(f"{k}: '{s}'")
+                Path("env.yaml").write_text("\\n".join(lines_yaml) + "\\n", encoding="utf-8")
 
-print("✅ Wrote .env and env.yaml")
-PY
+                print("✅ Wrote .env and env.yaml")
+                PY
         '''
       }
     }
@@ -108,11 +108,11 @@ PY
     stage('Push to Artifact Registry') {
       steps {
         withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-          sh """
-            gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-            gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-            docker push $IMAGE_TAG
-          """
+            sh(script: '''
+                gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+                gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                docker push "$IMAGE_TAG"
+            ''')
         }
       }
     }
