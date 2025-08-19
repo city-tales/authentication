@@ -111,3 +111,5 @@ Cloud-Shell must have write permission in Artifact-Registery
             --max-instances=1 \
             --env-vars-file env.yaml
     ]
+
+14. sudo docker system prune -af --volumes [Prune unused docker images from VM]

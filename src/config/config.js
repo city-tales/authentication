@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./env_json_loader.js";
 import { Constants } from "../utils/constants.js";
 
 // gRPC-only service: use PORT for gRPC (default 8080 locally). Bind to 0.0.0.0
