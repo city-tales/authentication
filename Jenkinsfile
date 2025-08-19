@@ -20,6 +20,23 @@ pipeline {
       }
     }
 
+    stage('Validate Branch') {
+      steps {
+        script {
+          def allowed = [
+            'feature/jenkins-testing',
+            'feature/docker-testing',
+            'feature/automation-testing',
+            'production'
+          ]
+          if (!allowed.contains(env.RAW_BRANCH)) {
+            error "❌ Branch '${env.RAW_BRANCH}' is not allowed. Allowed branches: ${allowed.join(', ')}"
+          }
+          echo "✅ Branch '${env.RAW_BRANCH}' is allowed"
+        }
+      }
+    }
+
     stage('Checkout submodules') {
       steps {
         sh(script: '''

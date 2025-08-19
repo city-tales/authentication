@@ -46,6 +46,8 @@ A comprehensive, production-ready authentication microservice built with Node.js
 - **Logging**: Grafana Loki integration for centralized logging
 - **Queue Management**: Bull/BullMQ for background jobs
 - **API**: gRPC for high-performance communication
+- **CI/CD**: Jenkins pipeline for Docker build and Cloud Run deploy (Artifact Registry)
+- **Secrets**: Doppler-managed secrets converted to `env.json` in CI
 
 ## 📋 Prerequisites
 
@@ -235,7 +237,50 @@ The service integrates with Grafana Loki for centralized logging:
 - **WARN**: Warning messages
 - **DEBUG**: Detailed debugging information
 
+## 🧭 Architecture Overview
+
+Layers: gRPC Handler → Controller → Repository → Model → Database
+
+- Redis caching, password hashing, comprehensive logging, trace ID tracking
+- Tables: `users`, `user_data`, `auth`
+- User states handled: new, existing verified, existing unverified, error paths
+- Data flow: gRPC request → context extraction → schema mapping → check/create user → cache → response
+
+Supporting utilities:
+
+- `src/config/env_json_loader.js` loads `env.json` safely (non-overriding) for local parity with CI
+- `required_envs.txt` defines mandatory configuration keys
+
+## 📚 Documentation Index
+
+- Jenkins setup and pipeline: `setup/jenkins_setup.md`
+- Jenkins VM + Cloud Run guide: `setup/jenkins_deploy_to_gcp_vm_and_cloud_run.md`
+- Raw VM commands: `setup/jenkins_vm_gcloud_commands.txt`
+- Env loader notes: `src/config/env_json_loader.js`
+
 ## 🚀 Deployment
+
+### CI/CD with Jenkins
+
+This repo ships with a production-grade `Jenkinsfile` that:
+
+- Fetches secrets from Doppler → writes `env.json`
+- Validates required env keys from `required_envs.txt`
+- Generates `.env` and `env.yaml`
+- Builds and pushes Docker image to Artifact Registry
+- Preflights the container
+- Deploys to Cloud Run with HTTP/2
+
+Branch policy enforced: only `feature/jenkins-testing`, `feature/docker-testing`, `feature/automation-testing`, `production` are allowed to deploy.
+
+See detailed guides:
+
+- Jenkins setup and pipeline: `setup/jenkins_setup.md`
+- VM provisioning + Cloud Run deploy: `setup/jenkins_deploy_to_gcp_vm_and_cloud_run.md`
+
+Blue Ocean pipeline snapshot (place file at `setup/assets/jenkins-pipeline-blueocean.png`):
+
+![Jenkins Blue Ocean Pipeline](./setup/assets/jenkins-pipeline-blueocean.png)
 
 ### Production Deployment
 

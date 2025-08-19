@@ -53,3 +53,4 @@ Tag VM for Jenkins server access
 ]
 
 15. sudo usermod -aG docker jenkins [Give permission to jenkins to talk to Docker] --If Build fails due to permission
+16. Add Credentials in Jenkins-Credentials
