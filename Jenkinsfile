@@ -42,58 +42,54 @@ pipeline {
     stage('Validate env.json keys') {
       steps {
         sh '''
-          node -e '
-            const fs = require("fs");
-            const env = JSON.parse(fs.readFileSync("env.json","utf8"));
-            const required = fs.readFileSync("required_envs.txt","utf8").split(/\\r?\\n/).filter(Boolean);
-            const missing = required.filter(k => !(k in env));
-            if (missing.length) { console.error("❌ Missing keys:", missing.join(", ")); process.exit(1); }
-            console.log("✅ All required environment variables found in env.json");
-          '
+          python3 - <<'PY'
+import json, sys, io, re
+from pathlib import Path
+
+env = json.loads(Path("env.json").read_text(encoding="utf-8"))
+required = [line.strip() for line in Path("required_envs.txt").read_text(encoding="utf-8").splitlines() if line.strip()]
+missing = [k for k in required if k not in env]
+if missing:
+    print("❌ Missing keys:", ", ".join(missing))
+    sys.exit(1)
+print("✅ All required environment variables found in env.json")
+PY
         '''
       }
     }
 
     // Build both .env (for docker preflight) and env.yaml (for Cloud Run)
-    // KEY POINTS:
-    // - Convert any real newlines in JSON values to literal "\n"
-    // - YAML single-quote values so backslashes remain literal (no special escaping)
-    // - Escape single quotes in YAML by doubling them per YAML spec
     stage('Make .env and env.yaml from env.json') {
       steps {
         sh '''
-          # .env for docker --env-file (single line KEY=VALUE, literal \\n sequences)
-          node -e '
-            const fs = require("fs");
-            const env = JSON.parse(fs.readFileSync("env.json","utf8"));
-            const lines = [];
-            for (const [k,vRaw] of Object.entries(env)) {
-              let v = String(vRaw).replace(/\\r/g, "");
-              v = v.replace(/\\n/g, "\\n"); // keep literal backslash+n (if already literal, stays; if real newline, becomes \\n)
-              // DO NOT add quotes in .env; docker expects raw KEY=VALUE
-              lines.push(`${k}=${v}`);
-            }
-            fs.writeFileSync(".env", lines.join("\\n") + "\\n");
-          '
-          echo "✅ Wrote .env for docker preflight"
+          python3 - <<'PY'
+import json
+from pathlib import Path
 
-          # env.yaml for Cloud Run --env-vars-file (single-quoted so backslashes are literal)
-          node -e '
-            const fs = require("fs");
-            const env = JSON.parse(fs.readFileSync("env.json","utf8"));
-            const out = [];
-            for (const [k,vRaw] of Object.entries(env)) {
-              let v = String(vRaw).replace(/\\r/g, "");
-              // Normalize any REAL newlines to literal \\n so app can .replace(/\\n/g,"\\n")
-              v = v.replace(/\\n/g, "\\n");
-              // YAML single-quoted escaping: single quote -> two single quotes
-              v = v.replace(/\\x27/g, "\\x27"); // safeguard (rare)
-              v = v.replace(/'/g, "''");
-              out.push(`${k}: '${v}'`);
-            }
-            fs.writeFileSync("env.yaml", out.join("\\n") + "\\n");
-          '
-          echo "✅ Wrote env.yaml for Cloud Run"
+env = json.loads(Path("env.json").read_text(encoding="utf-8"))
+
+def normalize(v: str) -> str:
+    # Ensure values are strings, strip CR, turn real newlines into literal \\n
+    s = str(v).replace("\\r", "")
+    s = s.replace("\\n", "\\n")  # if JSON already has \\n, it stays; if real newline, becomes \\n
+    return s
+
+# Write .env for docker --env-file (no quotes)
+lines_env = []
+for k, v in env.items():
+    lines_env.append(f"{k}={normalize(v)}")
+Path(".env").write_text("\\n".join(lines_env) + "\\n", encoding="utf-8")
+
+# Write env.yaml for Cloud Run --env-vars-file using single quotes
+# In YAML single-quoted scalars, backslashes are literal; single quote must be doubled.
+lines_yaml = []
+for k, v in env.items():
+    s = normalize(v).replace("'", "''")
+    lines_yaml.append(f"{k}: '{s}'")
+Path("env.yaml").write_text("\\n".join(lines_yaml) + "\\n", encoding="utf-8")
+
+print("✅ Wrote .env and env.yaml")
+PY
         '''
       }
     }
@@ -121,7 +117,7 @@ pipeline {
       }
     }
 
-    // Prove the image actually listens on 8080 with your env before deploying
+    // Optional but recommended preflight: prove the image listens with your env
     stage('Preflight Container') {
       steps {
         sh """
