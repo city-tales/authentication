@@ -14,8 +14,9 @@ pipeline {
     stages {
         stage('Generate Configs from Vault') {
             steps {
-                // Fetch secrets from Doppler and save into .env
-                sh "doppler secrets download --no-file --format env > .env"
+                withCredentials([string(credentialsId: 'doppler-token', variable: 'DOPPLER_TOKEN')]) {
+                    sh "doppler secrets download --no-file --format env > .env"
+                }
             }
         }
 
