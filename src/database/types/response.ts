@@ -128,3 +128,16 @@ export class GoogleAuthenticationResponse {
             response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
     }
 }
+
+export class HealthCheckResponse {
+    public statusCode: number;
+    public message: string;
+    public service: string;
+
+    constructor(response?: GoogleAuthenticationResponse) {
+        this.statusCode =
+            response?.statusCode ?? Constants.STATUS_CODES.BAD_GATEWAY;
+        this.message = Constants.HEALTH_CHECK.BACKUP;
+        this.service = Constants.HEALTH_CHECK.SERVICE;
+    }
+}

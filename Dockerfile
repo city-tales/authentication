@@ -3,7 +3,6 @@ FROM node:${NODE_VERSION}-alpine3.21
 
 WORKDIR /home/authentication
 
-COPY shared-proto /home/shared-proto
 COPY package*.json ./
 RUN npm ci
 COPY . .
@@ -11,6 +10,6 @@ COPY . .
 RUN npm run build
 RUN chmod +x ./start_app.sh && adduser -D app && chown -R app:app /home/authentication
 
-# Expose HTTP and gRPC ports
-EXPOSE 2221 5051
+# Expose single gRPC port (Cloud Run will set PORT)
+EXPOSE 8080
 CMD ["./start_app.sh"]

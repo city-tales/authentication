@@ -1,6 +1,7 @@
 import { Pool } from "./imports.js";
 import { dbUsername, dbHost, dbName, dbPassword, dbPort } from "./config.js";
 import { Constants } from "../utils/constants.js";
+import { NetworkHelper } from "../utils/network.js";
 
 const pool = new Pool({
     user: dbUsername,
@@ -8,10 +9,7 @@ const pool = new Pool({
     database: dbName,
     password: dbPassword,
     port: Number(dbPort) || Constants.DB_PORT,
-    ssl: {
-        rejectUnauthorized: false, // only for testing
-        // rejectUnauthorized: true, /* true for production */
-    },
+    ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: Constants.DB_TIMEOUTS.CONNECTION_TIMEOUT,
     idleTimeoutMillis: Constants.DB_TIMEOUTS.IDLE_TIMEOUT,
     query_timeout: Constants.DB_TIMEOUTS.QUERY_TIMEOUT,

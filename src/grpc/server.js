@@ -8,11 +8,13 @@ registerService(server);
 server.bindAsync(
     grpcServerUrl,
     grpc.ServerCredentials.createInsecure(),
-    (error, grpcPort) => {
+    (error, boundPort) => {
         if (error) {
-            console.log(`GPRC Server not setup ${error}`);
+            console.log(`gRPC server failed to bind: ${error}`);
             process.exit(1);
         }
-        console.log(`GPRC Server running on PORT ${grpcPort}`);
+        console.log(
+            `gRPC server running on ${grpcServerUrl} (bound PORT ${boundPort})`,
+        );
     },
 );

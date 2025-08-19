@@ -4,7 +4,7 @@
 set -euo pipefail
 
 branch="$1"
-regex='^(feature/[a-z0-9]+(-[a-z0-9]+)*|feature/ISS-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*|feature/ISS-[0-9]+/(issues|bug|incident)/[a-z0-9]+(-[a-z0-9]+)*|hotfix/[a-z0-9]+(-[a-z0-9]+)*|hotfix/ISS-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*|hotfix/TKT-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*)$'
+regex='^((feature|hotfix)/[a-z0-9]+(-[a-z0-9]+)*|(feature|hotfix)/(ISS|TKT)-[0-9]+/[a-z0-9]+(-[a-z0-9]+)*|feature/ISS-[0-9]+/(issues|bug|incident)/[a-z0-9]+(-[a-z0-9]+)*)$'
 
 if [[ "$branch" =~ $regex ]]; then
     echo "✅ Branch name is valid: $branch"
@@ -17,6 +17,7 @@ else
     echo "  feature/ISS-<issue_id>/issues/<descriptive-name>"
     echo "  feature/ISS-<issue_id>/bug/<descriptive-name>"
     echo "  feature/ISS-<issue_id>/incident/<descriptive-name>"
+    echo "  feature/TKT-<tkt_id>/<descriptive-name>"
     echo "  hotfix/<descriptive-name>"
     echo "  hotfix/ISS-<issue_id>/<descriptive-name>"
     echo "  hotfix/TKT-<issue_id>/<descriptive-name>"

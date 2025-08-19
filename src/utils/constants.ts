@@ -20,6 +20,8 @@ enum QUEUE_DB {
 }
 
 enum DB_TIMEOUTS {
+    PROD_REDIS_MAX_CONNECTIONS = 3,
+    DEMO_REDIS_MAX_CONNECTIONS = 15,
     CONNECTION_TIMEOUT = 10000,
     QUERY_TIMEOUT = 10000,
     LOCK_TIMEOUT = 10000,
@@ -96,6 +98,8 @@ enum LOKI_LOGGER_LABELS {
     POSTGRESQL_DB = "postgresqlDB",
     CACHE_DB = "cacheDB",
     QUEUE_DB = "queueDB",
+
+    HEALTH_CHECK = "healthcheck",
 }
 
 enum JWT_CONFIG {
@@ -107,6 +111,8 @@ enum JWT_CONFIG {
 
 enum DEV_CONTROLLER {
     SWTICH_OFF_REDIS = "false",
+    PRODUCTION = "production",
+    DEMO = "demo",
 }
 
 enum TABLES {
@@ -278,6 +284,12 @@ enum TYPE_SWITCH {
     INTERFACE = "interface",
 }
 
+enum HEALTH_CHECK {
+    BACKUP = "faultyHealthService",
+    RUNNING = "running",
+    SERVICE = LOKI_LOGGER.APPLICATION,
+}
+
 export class Constants {
     static readonly DB_PORT = "5432";
 
@@ -312,4 +324,6 @@ export class Constants {
 
     static readonly BOOLEAN_VALUES = BOOLEAN_VALUES;
     static readonly TYPE_SWITCH = TYPE_SWITCH;
+
+    static readonly HEALTH_CHECK = HEALTH_CHECK;
 }

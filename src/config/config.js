@@ -1,10 +1,11 @@
 import "dotenv/config";
 import { Constants } from "../utils/constants.js";
 
-const grpcPort = process.env.GRPC_PORT;
-const grpcServerUrl = process.env.GRPC_BASE_URL;
-const httpPort = process.env.PORT;
-const httpServerUrl = process.env.BASE_URL;
+// gRPC-only service: use PORT for gRPC (default 8080 locally). Bind to 0.0.0.0
+const grpcPort = parseInt(process.env.GRPC_PORT || "8080", 10);
+const grpcServerUrl = `0.0.0.0:${grpcPort}`;
+
+const nodeEnv = process.env.NODE_ENV;
 const dbUsername = process.env.DB_USERNAME;
 const dbName = process.env.DB_DATABASE;
 const dbHost = process.env.DB_HOST;
@@ -23,14 +24,13 @@ const lokiLoggerName = process.env.LOKI_LOGGER_NAME;
 const lokiLoggerUrl = process.env.LOKI_LOGGER_URL;
 const lokiLoggerUser = process.env.LOKI_LOGGER_USER;
 const lokiLoggerToken = process.env.LOKI_LOGGER_TOKEN;
-const privateKey = process.env.JWT_PRIVATE_KEY;
-const jwtPublicKey = process.env.JWT_PUBLIC_KEY;
+const privateKey = process.env.JWT_PRIVATE_KEY.replace(/\\n/g, "\n");
+const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, "\n");
 
 export {
     grpcPort,
     grpcServerUrl,
-    httpPort,
-    httpServerUrl,
+    nodeEnv,
     dbUsername,
     dbName,
     dbHost,
