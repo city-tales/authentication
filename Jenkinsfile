@@ -35,10 +35,10 @@ pipeline {
 
         stage('Convert ENV to YAML') {
             steps {
-                sh '''
-                sed 's/^\([^=]*\)=\(.*\)$/\1: "\\2"/' .env > env.yaml
+                sh """
+                sed 's/^\\([^=]*\\)=\\(.*\\)\$/\\1: "\\2"/' .env > env.yaml
                 echo "✅ env.yaml generated for Cloud Run"
-                '''
+                """
             }
         }
 
