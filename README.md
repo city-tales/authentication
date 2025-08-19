@@ -278,9 +278,8 @@ See detailed guides:
 - Jenkins setup and pipeline: `setup/jenkins_setup.md`
 - VM provisioning + Cloud Run deploy: `setup/jenkins_deploy_to_gcp_vm_and_cloud_run.md`
 
-Blue Ocean pipeline snapshot (place file at `setup/assets/jenkins-pipeline-blueocean.png`):
-
-![Jenkins Blue Ocean Pipeline](./setup/assets/jenkins-pipeline-blueocean.png)
+Blue Ocean pipeline snapshot
+<img width="1439" height="784" alt="Screenshot 2025-08-20 at 1 49 31 AM" src="https://github.com/user-attachments/assets/ce6b2304-c0b4-4fd8-ba0a-3714f2de419d" />
 
 ### Production Deployment
 
