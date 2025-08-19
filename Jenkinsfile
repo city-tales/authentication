@@ -7,13 +7,19 @@ pipeline {
         REPO_NAME    = "authentication"    // Artifact Registry repo name
         SERVICE      = "authentication"
         IMAGE        = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/authentication"
-
-        // Branch handling
-        RAW_BRANCH   = env.BRANCH_NAME ?: "production"
-        SAFE_BRANCH  = "${RAW_BRANCH.replaceAll('/', '-')}"
     }
 
     stages {
+        stage('Setup Branch Vars') {
+            steps {
+                script {
+                    env.RAW_BRANCH  = env.BRANCH_NAME ? env.BRANCH_NAME : "production"
+                    env.SAFE_BRANCH = env.RAW_BRANCH.replaceAll('/', '-')
+                    echo "🔀 Branch detected: RAW=${env.RAW_BRANCH}, SAFE=${env.SAFE_BRANCH}"
+                }
+            }
+        }
+
         stage('Generate Configs from Vault') {
             steps {
                 withCredentials([string(credentialsId: 'doppler-token', variable: 'DOPPLER_TOKEN')]) {
@@ -35,18 +41,17 @@ pipeline {
 
         stage('Convert ENV to YAML') {
             steps {
-                sh """
-                sed 's/^\\([^=]*\\)=\\(.*\\)\$/\\1: "\\2"/' .env > env.yaml
+                sh '''
+                sed 's/=/: "/' .env | sed 's/$/"/' > env.yaml
                 echo "✅ env.yaml generated for Cloud Run"
-                """
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    env.IMAGE_TAG = "${IMAGE}:${SAFE_BRANCH}-${BUILD_NUMBER}"
-                    // Ensure Docker runs from repo root
+                    env.IMAGE_TAG = "${env.IMAGE}:${env.SAFE_BRANCH}-${env.BUILD_NUMBER}"
                     dir(env.WORKSPACE) {
                         sh "docker build -t $IMAGE_TAG ."
                     }
@@ -90,10 +95,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful: ${RAW_BRANCH}"
+            echo "✅ Deployment successful: ${env.RAW_BRANCH}"
         }
         failure {
-            echo "❌ Deployment failed: ${RAW_BRANCH}"
+            echo "❌ Deployment failed: ${env.RAW_BRANCH}"
         }
     }
 }
